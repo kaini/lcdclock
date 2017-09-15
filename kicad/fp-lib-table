@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name "LCD Clock")(type KiCad)(uri ${KIPRJMOD}/lcdclock.pretty)(options "")(descr ""))
+)
