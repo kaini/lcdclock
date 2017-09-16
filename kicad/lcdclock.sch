@@ -292,23 +292,23 @@ $EndComp
 $Comp
 L TEST TP2
 U 1 1 59BAA1CF
-P 5000 2600
-F 0 "TP2" H 5000 2900 50  0000 C BNN
-F 1 "DDAT" H 5000 2850 50  0000 C CNN
-F 2 "Measurement_Points:Measurement_Point_Round-SMD-Pad_Big" H 5000 2600 50  0001 C CNN
-F 3 "" H 5000 2600 50  0001 C CNN
-	1    5000 2600
+P 5200 2600
+F 0 "TP2" H 5200 2900 50  0000 C BNN
+F 1 "DDAT" H 5200 2850 50  0000 C CNN
+F 2 "Measurement_Points:Measurement_Point_Round-SMD-Pad_Big" H 5200 2600 50  0001 C CNN
+F 3 "" H 5200 2600 50  0001 C CNN
+	1    5200 2600
 	1    0    0    -1  
 $EndComp
 $Comp
 L TEST TP3
 U 1 1 59BAA21E
-P 5200 2600
-F 0 "TP3" H 5200 2900 50  0000 C BNN
-F 1 "DCLK" H 5200 2850 50  0000 C CNN
-F 2 "Measurement_Points:Measurement_Point_Round-SMD-Pad_Big" H 5200 2600 50  0001 C CNN
-F 3 "" H 5200 2600 50  0001 C CNN
-	1    5200 2600
+P 5000 2600
+F 0 "TP3" H 5000 2900 50  0000 C BNN
+F 1 "DCLK" H 5000 2850 50  0000 C CNN
+F 2 "Measurement_Points:Measurement_Point_Round-SMD-Pad_Big" H 5000 2600 50  0001 C CNN
+F 3 "" H 5000 2600 50  0001 C CNN
+	1    5000 2600
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -483,12 +483,6 @@ Connection ~ 3450 3900
 Wire Wire Line
 	4800 2700 4800 2600
 Connection ~ 4800 2700
-Wire Wire Line
-	5000 2600 5000 2800
-Connection ~ 5000 2800
-Wire Wire Line
-	5200 2600 5200 2900
-Connection ~ 5200 2900
 Connection ~ 4300 6150
 Wire Wire Line
 	4750 4500 4750 4950
@@ -708,19 +702,10 @@ Wire Wire Line
 Wire Wire Line
 	6350 8150 8550 8150
 Wire Wire Line
-	6150 8350 8550 8350
-Wire Wire Line
-	6250 3250 8550 3250
-Wire Wire Line
-	6250 2800 6250 3250
+	6250 2800 6250 8350
 Connection ~ 6350 3150
 Wire Wire Line
 	8550 3150 6350 3150
-Wire Wire Line
-	8550 3350 6150 3350
-Connection ~ 6150 3350
-Wire Wire Line
-	6150 2900 6150 8350
 Wire Wire Line
 	6350 2700 6350 8150
 $Comp
@@ -858,4 +843,19 @@ NoConn ~ 9850 9800
 NoConn ~ 9850 9700
 NoConn ~ 9850 9600
 NoConn ~ 9850 9500
+Wire Wire Line
+	5000 2600 5000 2800
+Connection ~ 5000 2800
+Wire Wire Line
+	5200 2600 5200 2900
+Connection ~ 5200 2900
+Wire Wire Line
+	6250 3350 8550 3350
+Connection ~ 6250 3350
+Wire Wire Line
+	6250 8350 8550 8350
+Wire Wire Line
+	6150 2900 6150 3250
+Wire Wire Line
+	6150 3250 8550 3250
 $EndSCHEMATC
