@@ -414,7 +414,7 @@ U 1 1 59C2348A
 P 2050 3950
 F 0 "Y1" H 2050 4100 50  0000 C CNN
 F 1 "32.768kHz 12.5pF" H 2050 3800 50  0000 C CNN
-F 2 "Crystals:Crystal_SMD_SeikoEpson_MC405-2pin_9.6x4.1mm_HandSoldering" H 2050 3950 50  0001 C CNN
+F 2 "Crystals:Crystal_SMD_SeikoEpson_MC405-2pin_9.6x4.1mm" H 2050 3950 50  0001 C CNN
 F 3 "" H 2050 3950 50  0001 C CNN
 	1    2050 3950
 	0    -1   1    0   
