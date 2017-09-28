@@ -42,15 +42,8 @@ SECTIONS
         _ebss = .;
     } >RAM
 
-    .heap : ALIGN(4)
-    {
-        end = .;
-        . = ABSOLUTE(ORIGIN(RAM) + LENGTH(RAM) - 4K);
-    } >RAM
-
-    .stack : ALIGN(4)
-    {
-        . = ABSOLUTE(ORIGIN(RAM) + LENGTH(RAM));
-        _estack = .;
-    } >RAM
+    . = ALIGN(4);
+    end = .;  /* heap start */
+    . = ORIGIN(RAM) + LENGTH(RAM) - 4;
+    _estack = .;  /* stack start */
 }
