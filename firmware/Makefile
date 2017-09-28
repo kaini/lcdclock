@@ -21,9 +21,8 @@ CC := arm-none-eabi-gcc
 RM := rm -rf
 MKDIR := mkdir -p
 
-INCLUDES := -isystem cmsis/include -isystem hal/include
-CPU := -mcpu=cortex-m0plus -mfloat-abi=soft -mthumb
-DEFINES := -DSTM32L073xx
+INCLUDES := -isystem cmsis/include -isystem hal/include --specs=nano.specs
+CPU := -mcpu=cortex-m0plus -mfloat-abi=soft -mthumb -DSTM32L073xx
 WARNINGS := -std=gnu11 -Wall -Wextra -Wno-unused-parameter
 OPTIMIZATION := -fdata-sections -ffunction-sections -Wl,--gc-sections
 ifdef RELEASE
@@ -31,7 +30,7 @@ ifdef RELEASE
 else
 	OPTIMIZATION += -Og -g3 --specs=rdimon.specs
 endif
-CFLAGS := $(INCLUDES) $(DEFINES) $(CPU) $(WARNINGS) $(OPTIMIZATION)
+CFLAGS := $(INCLUDES) $(CPU) $(WARNINGS) $(OPTIMIZATION)
 
 .PHONY: clean
 
