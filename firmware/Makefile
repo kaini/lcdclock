@@ -4,58 +4,49 @@ else
 	OUTDIR := debug
 endif
 
-CMSIS_C_SOURCES := $(wildcard cmsis/src/*.c)
-CMSIS_C_OBJECTS := $(patsubst %.c,$(OUTDIR)/%.o,$(notdir $(CMSIS_C_SOURCES)))
-CMSIS_S_SOURCES := $(wildcard cmsis/src/*.s)
-CMSIS_S_OBJECTS := $(patsubst %.s,$(OUTDIR)/%.o,$(notdir $(CMSIS_S_SOURCES)))
-
-HAL_C_SOURCES := $(wildcard hal/src/*.c)
-HAL_C_OBJECTS := $(patsubst %.c,$(OUTDIR)/%.o,$(notdir $(HAL_C_SOURCES)))
-
-C_SOURCES := $(wildcard *.c)
-C_OBJECTS := $(patsubst %.c,$(OUTDIR)/%.o,$(C_SOURCES))
-
+SOURCES := $(wildcard cmsis/src/*.s) $(wildcard cmsis/src/*.c) $(wildcard hal/src/*.c) $(wildcard *.c)
+OBJECTS := $(patsubst %.s,$(OUTDIR)/%.o,$(patsubst %.c,$(OUTDIR)/%.o,$(SOURCES)))
 FIRMWARE := $(OUTDIR)/firmware.elf
 
-CC := arm-none-eabi-gcc
 RM := rm -rf
 MKDIR := mkdir -p
 
-INCLUDES := -isystem cmsis/include -isystem hal/include --specs=nano.specs
-CPU := -mcpu=cortex-m0plus -mfloat-abi=soft -mthumb -DSTM32L073xx
-WARNINGS := -std=gnu11 -Wall -Wextra -Wno-unused-parameter
-OPTIMIZATION := -fdata-sections -ffunction-sections -Wl,--gc-sections
+CC := arm-none-eabi-gcc
+READELF := arm-none-eabi-readelf
+OBJDUMP := arm-none-eabi-objdump
+SIZE := arm-none-eabi-size
+CFLAGS := \
+	-Icmsis/include -Ihal/include -I. \
+	-DSTM32L073xx -DUSE_HAL_DRIVER \
+	-mcpu=cortex-m0plus -mfloat-abi=soft -mthumb  \
+	-fdata-sections -ffunction-sections -Wl,--gc-sections \
+	-std=gnu11 -Werror -Wall -Wextra -Wno-unused-parameter
 ifdef RELEASE
-	OPTIMIZATION += -O3 -flto --specs=nosys.specs
+	CFLAGS += -DNDEBUG -flto -O3 --specs=nosys.specs
 else
-	OPTIMIZATION += -Og -g3 --specs=rdimon.specs
+	CFLAGS += -Og -g3 --specs=rdimon.specs
 endif
-CFLAGS := $(INCLUDES) $(CPU) $(WARNINGS) $(OPTIMIZATION)
 
-.PHONY: clean
+.PHONY: clean tests
 
 all: $(FIRMWARE)
 
-$(FIRMWARE): $(CMSIS_S_OBJECTS) $(CMSIS_C_OBJECTS) $(HAL_C_OBJECTS) $(C_OBJECTS) linker.ld
-	$(CC) $(CFLAGS) -T linker.ld -o $@ $(CMSIS_S_OBJECTS) $(CMSIS_C_OBJECTS) $(HAL_C_OBJECTS) $(C_OBJECTS)
+$(FIRMWARE): $(OBJECTS) linker.ld
+	@$(MKDIR) $(@D)
+	$(CC) $(CFLAGS) -T linker.ld -o $@ $(OBJECTS)
+	$(READELF) -a $@ > $@.txt
+	$(OBJDUMP) -d $@ > $@.asm
+	$(SIZE) $@
 
--include $(patsubst %.o,%.d,$(CMSIS_C_OBJECTS))
-$(CMSIS_C_OBJECTS): $(OUTDIR)/%.o: cmsis/src/%.c | $(OUTDIR)
+-include $(patsubst %.o,%.d,$(OBJECTS))
+
+$(OUTDIR)/%.o: %.c
+	@$(MKDIR) $(@D)
 	$(CC) $(CFLAGS) -MD -c -o $@ $<
 
-$(CMSIS_S_OBJECTS): $(OUTDIR)/%.o: cmsis/src/%.s | $(OUTDIR)
-	$(CC) $(CFLAGS) -c -o $@ $<
-
--include $(patsubst %.o,%.d,$(HAL_C_OBJECTS))
-$(HAL_C_OBJECTS): $(OUTDIR)/%.o: hal/src/%.c | $(OUTDIR)
+$(OUTDIR)/%.o: %.s
+	@$(MKDIR) $(@D)
 	$(CC) $(CFLAGS) -MD -c -o $@ $<
-
--include $(patsubst %.o,%.d,$(C_OBJECTS))
-$(C_OBJECTS): $(OUTDIR)/%.o: %.c | $(OUTDIR)
-	$(CC) $(CFLAGS) -MD -c -o $@ $<
-
-$(OUTDIR):
-	$(MKDIR) $@
 
 clean:
 	$(RM) debug release
