@@ -1,7 +1,15 @@
-#include "dfc77_parser.h"
-#include "test.h"
+#include "dcf77_parser.h"
+#include <stdarg.h>
+#include <setjmp.h>
+#include <cmocka.h>
 
-TEST_RESULT simple_test() {
-    TEST_ASSERT(1 == 1);
-    TEST_ASSERT(1 == 2);
+static void simple_test(void** state) {
+    
+}
+
+int main(void) {
+    const struct CMUnitTest tests[] = {
+        cmocka_unit_test(simple_test),
+    };
+    return cmocka_run_group_tests(tests, NULL, NULL);
 }

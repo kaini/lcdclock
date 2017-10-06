@@ -4,9 +4,15 @@ else
 	OUTDIR := debug
 endif
 
-SOURCES := $(wildcard cmsis/src/*.s) $(wildcard cmsis/src/*.c) $(wildcard hal/src/*.c) $(wildcard *.c)
-OBJECTS := $(patsubst %.s,$(OUTDIR)/%.o,$(patsubst %.c,$(OUTDIR)/%.o,$(SOURCES)))
+C_SOURCES := $(wildcard cmsis/src/*.c) $(wildcard hal/src/*.c) $(wildcard *.c)
+S_SOURCES := $(wildcard cmsis/src/*.s)
+C_OBJECTS := $(patsubst %.c,$(OUTDIR)/%.o,$(C_SOURCES))
+S_OBJECTS := $(patsubst %.s,$(OUTDIR)/%.o,$(S_SOURCES))
 FIRMWARE := $(OUTDIR)/firmware.elf
+
+TEST_C_SOURCES := $(wildcard test/*.c) dcf77_parser.c
+TEST_C_OBJECTS := $(patsubst %.c,$(OUTDIR)/%.test.o,$(TEST_C_SOURCES))
+TEST_EXE := $(OUTDIR)/testrunner
 
 RM := rm -rf
 MKDIR := mkdir -p
@@ -15,38 +21,67 @@ CC := arm-none-eabi-gcc
 READELF := arm-none-eabi-readelf
 OBJDUMP := arm-none-eabi-objdump
 SIZE := arm-none-eabi-size
-CFLAGS := \
+TEST_CC := gcc
+
+COMMON_CFLAGS := \
 	-Icmsis/include -Ihal/include -I. \
 	-DSTM32L073xx -DUSE_HAL_DRIVER \
-	-mcpu=cortex-m0plus -mfloat-abi=soft -mthumb  \
-	-fdata-sections -ffunction-sections -Wl,--gc-sections \
 	-std=gnu11 -Werror -Wall -Wextra -Wno-unused-parameter
+TARGET_CFLAGS := \
+	-mcpu=cortex-m0plus -mfloat-abi=soft -mthumb  \
+	-fdata-sections -ffunction-sections -Wl,--gc-sections
+TARGET_DEBUG_CFLAGS := \
+	-Og -g3 --specs=rdimon.specs
+TARGET_RELEASE_CFLAGS := \
+	-DNDEBUG -flto -O3 --specs=nosys.specs
+TEST_CFLAGS := \
+	-DTEST -O0 -g3 -fsanitize=undefined
+
+FINAL_TARGET_CFLAGS := $(COMMON_CFLAGS) $(TARGET_CFLAGS)
 ifdef RELEASE
-	CFLAGS += -DNDEBUG -flto -O3 --specs=nosys.specs
+	FINAL_TARGET_CFLAGS += $(TARGET_RELEASE_CFLAGS)
 else
-	CFLAGS += -Og -g3 --specs=rdimon.specs
+	FINAL_TARGET_CFLAGS += $(TARGET_DEBUG_CFLAGS)
 endif
 
-.PHONY: clean tests
+FINAL_TEST_CFLAGS := $(COMMON_CFLAGS) $(TEST_CFLAGS)
 
-all: $(FIRMWARE)
+TEST_LIBS := -lcmocka
 
-$(FIRMWARE): $(OBJECTS) linker.ld
+.SUFFIXES:  # disable builtin rules
+.PHONY: clean test
+
+all: $(FIRMWARE) test
+
+test: $(TEST_EXE)
+	$(TEST_EXE)
+
+$(FIRMWARE): $(S_OBJECTS) $(C_OBJECTS) | linker.ld
 	@$(MKDIR) $(@D)
-	$(CC) $(CFLAGS) -T linker.ld -o $@ $(OBJECTS)
+	$(CC) $(FINAL_TARGET_CFLAGS) -T linker.ld -o $@ $^
 	$(READELF) -a $@ > $@.txt
 	$(OBJDUMP) -d $@ > $@.asm
 	$(SIZE) $@
 
--include $(patsubst %.o,%.d,$(OBJECTS))
-
-$(OUTDIR)/%.o: %.c
+$(TEST_EXE): $(TEST_C_OBJECTS)
 	@$(MKDIR) $(@D)
-	$(CC) $(CFLAGS) -MD -c -o $@ $<
+	$(TEST_CC) $(FINAL_TEST_CFLAGS) -o $@ $^ $(TEST_LIBS)
 
-$(OUTDIR)/%.o: %.s
+-include $(patsubst %.o,%.d,$(C_OBJECTS))
+-include $(patsubst %.o,%.d,$(S_OBJECTS))
+-include $(patsubst %.o,%.d,$(TEST_C_OBJECTS))
+
+$(C_OBJECTS): $(OUTDIR)/%.o: %.c
 	@$(MKDIR) $(@D)
-	$(CC) $(CFLAGS) -MD -c -o $@ $<
+	$(CC) $(FINAL_TARGET_CFLAGS) -MD -c -o $@ $^
+
+$(S_OBJECTS): $(OUTDIR)/%.o: %.s
+	@$(MKDIR) $(@D)
+	$(CC) $(FINAL_TARGET_CFLAGS) -MD -c -o $@ $^
+
+$(TEST_C_OBJECTS): $(OUTDIR)/%.test.o: %.c
+	@$(MKDIR) $(@D)
+	$(TEST_CC) $(FINAL_TEST_CFLAGS) -MD -c -o $@ $^
 
 clean:
 	$(RM) debug release
