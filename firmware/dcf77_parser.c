@@ -1,8 +1,8 @@
 #include "dcf77_parser.h"
+#include "my_assert.h"
 #include "countof.h"
 #include <string.h>
 #include <stdio.h>
-#include <assert.h>
 
 void dcf77_parser_init(dcf77_parser* parser) {
     memset(parser->second_sync_samples, 0, sizeof(parser->second_sync_samples));
@@ -158,7 +158,7 @@ static void parse_dataframe(dcf77_parser* parser) {
                          4 * (parser->result.minute_ones[2] != DCF77_BIT_ZERO) +
                          2 * (parser->result.minute_ones[1] != DCF77_BIT_ZERO) +
                          1 * (parser->result.minute_ones[0] != DCF77_BIT_ZERO);
-    assert(0 <= minimum_value && minimum_value <= maximum_value);
+    ASSERT(0 <= minimum_value && minimum_value <= maximum_value);
 
     if (maximum_value < 10) {
         // If the value is beween 0 and 9 the tens do not need to be increased.
@@ -274,8 +274,8 @@ dcf77_result dcf77_parser_result(const dcf77_parser* parser) {
                           parser->result.one == DCF77_BIT_ONE &&
                           parser->result.minute_mark == DCF77_BIT_MINUTE_MARK;
     result.minute_valid = is_parity_valid(parser->result.minute_parity,
-                                        parser->result.minute_bits,
-                                        COUNTOF(parser->result.minute_bits));
+                                          parser->result.minute_bits,
+                                          COUNTOF(parser->result.minute_bits));
     result.hour_valid = is_parity_valid(parser->result.hour_parity,
                                         parser->result.hour_bits,
                                         COUNTOF(parser->result.hour_bits));

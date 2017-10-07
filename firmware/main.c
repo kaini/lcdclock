@@ -1,7 +1,7 @@
 #include "display.h"
 #include "dcf77.h"
 #include "stm32l0xx.h"
-#include <assert.h>
+#include "my_assert.h"
 
 /* override */ void HAL_MspInit(void) {
     // Go into the lowest power range
@@ -19,7 +19,7 @@
         },
     };
     HAL_StatusTypeDef result = HAL_RCC_OscConfig(&osc_init);
-    assert(result == HAL_OK);
+    ASSERT(result == HAL_OK);
 
     // Setup the system clock and all peripheral clocks to 1 MHz based on the MSI
     RCC_ClkInitTypeDef clk_init = {
@@ -30,7 +30,7 @@
         .APB2CLKDivider = RCC_HCLK_DIV1,
     };
     result = HAL_RCC_ClockConfig(&clk_init, FLASH_LATENCY_0);
-    assert(result == HAL_OK);
+    ASSERT(result == HAL_OK);
 
     // Clock RTC by external crystal
     // Note: The LCD clock is driven by the RTC clock
@@ -47,6 +47,6 @@
 
 int main(void) {
     HAL_StatusTypeDef result = HAL_Init();
-    assert(result == HAL_OK);
+    ASSERT(result == HAL_OK);
     return 0;
 }

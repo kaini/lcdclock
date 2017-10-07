@@ -1,6 +1,6 @@
 #include "display.h"
 #include "stm32l0xx.h"
-#include <assert.h>
+#include "my_assert.h"
 
 // 1/4 duty, 1/3 bias, 64 Hz frame time
 static LCD_HandleTypeDef hlcd = {
@@ -35,16 +35,16 @@ static LCD_HandleTypeDef hlcd = {
 
 void display_init(void) {
     HAL_StatusTypeDef result = HAL_LCD_Init(&hlcd);
-    assert(result == HAL_OK);
+    ASSERT(result == HAL_OK);
 
     result = HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER0, UINT32_MAX, UINT32_MAX);
-    assert(result == HAL_OK);
+    ASSERT(result == HAL_OK);
     result = HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER2, UINT32_MAX, UINT32_MAX);
-    assert(result == HAL_OK);
+    ASSERT(result == HAL_OK);
     result = HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER4, UINT32_MAX, UINT32_MAX);
-    assert(result == HAL_OK);
+    ASSERT(result == HAL_OK);
     result = HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER8, UINT32_MAX, UINT32_MAX);
-    assert(result == HAL_OK);
+    ASSERT(result == HAL_OK);
     result = HAL_LCD_UpdateDisplayRequest(&hlcd);
-    assert(result == HAL_OK);
+    ASSERT(result == HAL_OK);
 }

@@ -1,11 +1,12 @@
 #include "dcf77_parser.h"
 #include "dcf77_10ms_pulses.h"
+#include "my_assert.h"
+#include <assert.h>
 #include <stdarg.h>
 #include <setjmp.h>
 #include <cmocka.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <assert.h>
 
 #define TWO(...) __VA_ARGS__, __VA_ARGS__
 #define THREE(...) __VA_ARGS__, __VA_ARGS__, __VA_ARGS__
@@ -103,7 +104,7 @@ static char dcf77_bit_char(dcf77_bit bit) {
         case DCF77_BIT_MINUTE_MARK:
             return 'M';
         default:
-            assert(false);
+            ASSERT(false);
             return '?';
     }
 }

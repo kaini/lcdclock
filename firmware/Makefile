@@ -37,7 +37,7 @@ TARGET_DEBUG_CFLAGS := \
 TARGET_RELEASE_CFLAGS := \
 	-DNDEBUG -flto -O3 --specs=nosys.specs
 TEST_CFLAGS := \
-	-DTEST -O0 -g3 -fsanitize=undefined -fno-sanitize-recover
+	-O0 -g3 -fsanitize=undefined -fno-sanitize-recover
 
 FINAL_TARGET_CFLAGS := $(COMMON_CFLAGS) $(TARGET_CFLAGS)
 ifdef RELEASE
