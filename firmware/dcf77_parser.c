@@ -91,16 +91,20 @@ static dcf77_bit parse_bit(const dcf77_parser* parser, const bool* samples) {
 static void handle_minute_mark(dcf77_parser* parser) {
     parser->minute_marks[parser->bit_at] += 1;
 
-    // If the counters would overflow reduce them by a fixed amount.
-    if (parser->minute_marks[parser->bit_at] == INT8_MAX) {
+    // The counters have to be clamped every now and then to avoid that it takes
+    // a too long time to resync the minute mark if it changes after a leap
+    // second. In this setup it takes at most 11 minutes to resync to a new
+    // minute mark after a leap second.
+    if (parser->minute_marks[parser->bit_at] == 10) {
         for (int i = 0; i < DCF77_PARSER_BITS_PER_MINUTE; ++i) {
-            parser->minute_marks[i] -= 100;
+            parser->minute_marks[i] -= 5;
             if (parser->minute_marks[i] < 0) {
                 parser->minute_marks[i] = 0;
             }
         }
     }
 
+    // Set a new minute mark if this is new new maximum.
     if (parser->bit_at != parser->minute_mark) {
         if (parser->minute_mark == -1 || parser->minute_marks[parser->bit_at] >= parser->minute_marks[parser->minute_mark]) {
             parser->minute_mark = parser->bit_at;
