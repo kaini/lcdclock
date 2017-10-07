@@ -192,7 +192,7 @@ static void test_dcf77_parser_parse(void** state) {
     assert_int_equal(frame220.hour, 1);
     assert_int_equal(frame220.minute, 16);
 
-    assert_int_equal(valid_frames, 24);
+    assert_int_equal(valid_frames, 61);
 }
 
 int main(void) {

@@ -130,10 +130,10 @@ static const dcf77_bit ADD_CARRY_TABLE[4][4] = {
 
 static const dcf77_bit COMBINE_TABLE[4][4] = {
     /*                            DCF77_BIT_UNKNOWN,     DCF77_BIT_ZERO,    DCF77_BIT_ONE,     DCF77_BIT_MINUTE_MARK */
-    /* DCF77_BIT_UNKNOWN */     { DCF77_BIT_UNKNOWN,     DCF77_BIT_ZERO,    DCF77_BIT_ONE,     DCF77_BIT_MINUTE_MARK },
-    /* DCF77_BIT_ZERO */        { DCF77_BIT_ZERO,        DCF77_BIT_ZERO,    DCF77_BIT_UNKNOWN, DCF77_BIT_UNKNOWN     },
-    /* DCF77_BIT_ONE */         { DCF77_BIT_ONE,         DCF77_BIT_UNKNOWN, DCF77_BIT_ONE,     DCF77_BIT_UNKNOWN     },
-    /* DCF77_BIT_MINUTE_MARK */ { DCF77_BIT_MINUTE_MARK, DCF77_BIT_UNKNOWN, DCF77_BIT_UNKNOWN, DCF77_BIT_MINUTE_MARK },
+    /* DCF77_BIT_UNKNOWN */     { DCF77_BIT_UNKNOWN,     DCF77_BIT_ZERO,    DCF77_BIT_ONE,     DCF77_BIT_UNKNOWN },
+    /* DCF77_BIT_ZERO */        { DCF77_BIT_ZERO,        DCF77_BIT_ZERO,    DCF77_BIT_UNKNOWN, DCF77_BIT_ZERO    },
+    /* DCF77_BIT_ONE */         { DCF77_BIT_ONE,         DCF77_BIT_UNKNOWN, DCF77_BIT_ONE,     DCF77_BIT_ONE     },
+    /* DCF77_BIT_MINUTE_MARK */ { DCF77_BIT_UNKNOWN,     DCF77_BIT_ZERO,    DCF77_BIT_ONE,     DCF77_BIT_UNKNOWN },
 };
 
 static dcf77_bit ripple_add(dcf77_bit* bits, int length, dcf77_bit carry) {
@@ -158,11 +158,11 @@ static void parse_dataframe(dcf77_parser* parser) {
                          4 * (parser->result.minute_ones[2] != DCF77_BIT_ZERO) +
                          2 * (parser->result.minute_ones[1] != DCF77_BIT_ZERO) +
                          1 * (parser->result.minute_ones[0] != DCF77_BIT_ZERO);
-    assert(minimum_value <= maximum_value);
+    assert(0 <= minimum_value && minimum_value <= maximum_value);
 
     if (maximum_value < 10) {
         // If the value is beween 0 and 9 the tens do not need to be increased.
-    } else if (maximum_value == minimum_value && maximum_value == 10) {
+    } else if (minimum_value == 10 && maximum_value == 10) {
         // If the value is 10 the tens need to be incremented and the ones need
         // to be reset.
         parser->result.minute_ones[0] = DCF77_BIT_ZERO;
@@ -170,10 +170,10 @@ static void parse_dataframe(dcf77_parser* parser) {
         parser->result.minute_ones[2] = DCF77_BIT_ZERO;
         parser->result.minute_ones[3] = DCF77_BIT_ZERO;
         ripple_add(parser->result.minute_tens, COUNTOF(parser->result.minute_tens), DCF77_BIT_ONE);
-    } else if (minimum_value >= 10) {
-        // Something is wrong if the minimum value is >= 10, the field is out of
-        // range. Forget everything we know about the ones and possibly increment
-        // the tens.
+    } else if (minimum_value > 10) {
+        // Something is wrong if the minimum value is greater than 10.
+        // The field is out of range. Forget everything we know about the ones
+        // and possibly increment the tens.
         parser->result.minute_ones[0] = DCF77_BIT_UNKNOWN;
         parser->result.minute_ones[1] = DCF77_BIT_UNKNOWN;
         parser->result.minute_ones[2] = DCF77_BIT_UNKNOWN;
@@ -191,24 +191,29 @@ static void parse_dataframe(dcf77_parser* parser) {
         if (parser->result.minute_bits[i] == DCF77_BIT_ZERO) {
             // no-op
         } else if (parser->result.minute_bits[i] == DCF77_BIT_ONE) {
+            // xor
             if (parser->result.minute_parity == DCF77_BIT_ZERO) {
                 parser->result.minute_parity = DCF77_BIT_ONE;
             } else {
                 parser->result.minute_parity = DCF77_BIT_ZERO;
             }
         } else {
+            // unknown
             parser->result.minute_parity = DCF77_BIT_UNKNOWN;
             break;
         }
     }
 
-    for (int i = 0; i < DCF77_PARSER_BITS_PER_MINUTE; ++i) {
+    for (int i = 0; i < DCF77_PARSER_BITS_PER_MINUTE - 1; ++i) {
         int source_i = i + parser->minute_mark + 1;
         if (source_i >= DCF77_PARSER_BITS_PER_MINUTE) {
             source_i -= DCF77_PARSER_BITS_PER_MINUTE;
         }
         parser->result.bits[i] = COMBINE_TABLE[parser->result.bits[i]][parser->new_bits[source_i]];
     }
+
+    // This value is hardcoded here, because its position is decided by handle_minute_mark.
+    parser->result.bits[DCF77_PARSER_BITS_PER_MINUTE - 1] = DCF77_BIT_MINUTE_MARK;
 
     parser->frame_number += 1;
 }
