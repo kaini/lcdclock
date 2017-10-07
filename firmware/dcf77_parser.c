@@ -26,34 +26,27 @@ static void second_sync(dcf77_parser* parser, const bool* samples) {
     parser->second_sync_count += 1;
 
     if (parser->second_sync_count == 10) {
-        // Calculate the first derivate with a bandwith of 100 ms, i.e., use the
-        // kernel [-1; -1; -1; -1; -1; ->1<-; 1; 1; 1; 1].
-        int current_value = 0 -
-                            parser->second_sync_samples[DCF77_PARSER_SAMPLES_PER_SECOND - 5] -
-                            parser->second_sync_samples[DCF77_PARSER_SAMPLES_PER_SECOND - 4] -
-                            parser->second_sync_samples[DCF77_PARSER_SAMPLES_PER_SECOND - 3] -
-                            parser->second_sync_samples[DCF77_PARSER_SAMPLES_PER_SECOND - 2] -
-                            parser->second_sync_samples[DCF77_PARSER_SAMPLES_PER_SECOND - 1] +
-                            parser->second_sync_samples[0] +
+        // Find the 100 ms band with the lowest values. The beginning of this
+        // band is the second start. The applied kernel is therefore
+        // [>1<; 1; 1; 1; 1; 1; 1; 1; 1; 1]
+        int current_value = parser->second_sync_samples[0] +
                             parser->second_sync_samples[1] +
                             parser->second_sync_samples[2] +
                             parser->second_sync_samples[3] +
-                            parser->second_sync_samples[4];
+                            parser->second_sync_samples[4] +
+                            parser->second_sync_samples[5] +
+                            parser->second_sync_samples[6] +
+                            parser->second_sync_samples[7] +
+                            parser->second_sync_samples[8] +
+                            parser->second_sync_samples[9];
         int min_value = current_value;
         int min_index = 0;
         for (int i = 1; i < DCF77_PARSER_SAMPLES_PER_SECOND; ++i) {
-            // Add the old leftmost value.
-            int left_index = i - 6;
-            if (left_index < 0) {
-                left_index += DCF77_PARSER_SAMPLES_PER_SECOND;
-            }
-            current_value += parser->second_sync_samples[left_index];
-
-            // Make the old center value negative (subtract it twice)
-            current_value -= 2 * parser->second_sync_samples[i - 1];
+            // Subtract the old leftmost value.
+            current_value -= parser->second_sync_samples[i - 1];
 
             // Add the new rightmost value
-            int right_index = i + 4;
+            int right_index = i + 9;
             if (right_index >= DCF77_PARSER_SAMPLES_PER_SECOND) {
                 right_index -= DCF77_PARSER_SAMPLES_PER_SECOND;
             }

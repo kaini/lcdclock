@@ -51,10 +51,10 @@ static void test_dcf77_parser_second_sync(void** state) {
 
     for (int i = 0; i < 10; ++i) {
         if (i % 2 == 0) {
-            bool sample[100] = { 1, 0, 1, 1, 1, TEN(0), FIVE(1), EIGHTY(1) };
+            bool sample[100] = { 1, 0, 1, 0, 1, TEN(0), FIVE(1), EIGHTY(1) };
             dcf77_parser_feed(&parser, sample);
         } else {
-            bool sample[100] = { 1, 1, 0, 1, 1, TEN(0), FIVE(1), EIGHTY(1) };
+            bool sample[100] = { 0, 1, 0, 1, 0, TEN(0), FIVE(1), EIGHTY(1) };
             dcf77_parser_feed(&parser, sample);
         }
     }
@@ -192,7 +192,7 @@ static void test_dcf77_parser_parse(void** state) {
     assert_int_equal(frame220.hour, 1);
     assert_int_equal(frame220.minute, 16);
 
-    assert_int_equal(valid_frames, 23);
+    assert_int_equal(valid_frames, 24);
 }
 
 int main(void) {
