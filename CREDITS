@@ -1,0 +1,6 @@
+The contents of the file firmware/test/dcf77_10ms_pulses.c is converted from the image by:
+    http://www.gjlay.de/software/dcf77/konzept.html
+
+The contents of the folders firmware/cmsis and firmware/hal are provided by ST:
+    http://www.st.com/en/microcontrollers/stm32l073cz.html download item "STM32CubeL0"
+
