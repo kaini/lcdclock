@@ -1,0 +1,9 @@
+eoe 1
+device STM32L073CZ
+si SWD
+speed 4000
+connect
+r
+loadbin build/firmware.bin, 0
+r
+q

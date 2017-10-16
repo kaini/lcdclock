@@ -1,14 +1,9 @@
-ifdef RELEASE
-	OUTDIR := release
-else
-	OUTDIR := debug
-endif
-
+OUTDIR := build
 C_SOURCES := $(wildcard cmsis/src/*.c) $(wildcard hal/src/*.c) $(wildcard *.c)
 S_SOURCES := $(wildcard cmsis/src/*.s)
 C_OBJECTS := $(patsubst %.c,$(OUTDIR)/%.o,$(C_SOURCES))
 S_OBJECTS := $(patsubst %.s,$(OUTDIR)/%.o,$(S_SOURCES))
-FIRMWARE := $(OUTDIR)/firmware.elf
+FIRMWARE := $(OUTDIR)/firmware
 
 TEST_C_SOURCES := $(wildcard test/*.c) dcf77_parser.c
 TEST_C_OBJECTS := $(patsubst %.c,$(OUTDIR)/%.test.o,$(TEST_C_SOURCES))
@@ -16,10 +11,10 @@ TEST_EXE := $(OUTDIR)/testrunner
 
 RM := rm -rf
 MKDIR := mkdir -p
+JLINK := jlink
 
 CC := arm-none-eabi-gcc
-READELF := arm-none-eabi-readelf
-OBJDUMP := arm-none-eabi-objdump
+OBJCOPY := arm-none-eabi-objcopy
 SIZE := arm-none-eabi-size
 TEST_CC := gcc
 
@@ -37,7 +32,7 @@ TARGET_DEBUG_CFLAGS := \
 TARGET_RELEASE_CFLAGS := \
 	-DNDEBUG -flto -O3 --specs=nosys.specs
 TEST_CFLAGS := \
-	-O0 -g3 -fsanitize=undefined -fno-sanitize-recover
+	-O0 -g3
 
 FINAL_TARGET_CFLAGS := $(COMMON_CFLAGS) $(TARGET_CFLAGS)
 ifdef RELEASE
@@ -51,18 +46,19 @@ FINAL_TEST_CFLAGS := $(COMMON_CFLAGS) $(TEST_CFLAGS)
 TEST_LIBS := -lcmocka
 
 .SUFFIXES:  # disable builtin rules
-.PHONY: clean test
+.PHONY: clean test flash
 
-all: $(FIRMWARE) test
+all: $(FIRMWARE).elf $(FIRMWARE).bin test
 
 test: $(TEST_EXE)
 	$(TEST_EXE)
 
-$(FIRMWARE): $(S_OBJECTS) $(C_OBJECTS) | linker.ld
+flash: $(FIRMWARE).bin | flash.jlink
+	$(JLINK) -CommandFile flash.jlink
+
+$(FIRMWARE).elf: $(S_OBJECTS) $(C_OBJECTS) | linker.ld
 	@$(MKDIR) $(@D)
 	$(CC) $(FINAL_TARGET_CFLAGS) -T linker.ld -o $@ $^
-	$(READELF) -a $@ > $@.txt
-	$(OBJDUMP) -d $@ > $@.asm
 	$(SIZE) $@
 
 $(TEST_EXE): $(TEST_C_OBJECTS)
@@ -72,6 +68,10 @@ $(TEST_EXE): $(TEST_C_OBJECTS)
 -include $(patsubst %.o,%.d,$(C_OBJECTS))
 -include $(patsubst %.o,%.d,$(S_OBJECTS))
 -include $(patsubst %.o,%.d,$(TEST_C_OBJECTS))
+
+%.bin: %.elf
+	@$(MKDIR) $(@D)
+	$(OBJCOPY) -O binary $^ $@
 
 $(C_OBJECTS): $(OUTDIR)/%.o: %.c
 	@$(MKDIR) $(@D)
@@ -86,4 +86,4 @@ $(TEST_C_OBJECTS): $(OUTDIR)/%.test.o: %.c
 	$(TEST_CC) $(FINAL_TEST_CFLAGS) -MD -c -o $@ $<
 
 clean:
-	$(RM) debug release
+	$(RM) $(OUTDIR)

@@ -2,6 +2,7 @@
 #include "dcf77.h"
 #include "stm32l0xx.h"
 #include "my_assert.h"
+#include <stdbool.h>
 
 /* override */ void HAL_MspInit(void) {
     // Go into the lowest power range
@@ -37,7 +38,7 @@
     __HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSE);
     __HAL_RCC_RTC_ENABLE();
 
-    // Output the LSE at PB13 (= MCO3)
+    // Output the LSE at PB13 (= MCO3) for debugging purposes
     HAL_RCC_MCOConfig(RCC_MCO3, RCC_MCO1SOURCE_LSE, RCC_MCODIV_1);
 
     // Init drivers
@@ -45,8 +46,28 @@
     dcf77_init();
 }
 
+/* override */ void SysTick_Handler(void) {
+    HAL_IncTick();
+}
+
+extern void initialise_monitor_handles(void);
+
+static RTC_HandleTypeDef rtc = {
+    .Instance = RTC,
+    .Init = {
+        .HourFormat = RTC_HOURFORMAT_24,
+        .AsynchPrediv = 127,  // divide 32768 by 128 = 256
+        .SynchPrediv = 255  // divide 256 by 256 = 1
+    }
+};
+
 int main(void) {
+    initialise_monitor_handles();
     HAL_StatusTypeDef result = HAL_Init();
     ASSERT(result == HAL_OK);
+
+    result = HAL_RTC_Init(&rtc);
+    ASSERT(result == HAL_OK);
+
     return 0;
 }
