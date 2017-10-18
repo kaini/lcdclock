@@ -34,17 +34,11 @@ static LCD_HandleTypeDef hlcd = {
 }
 
 void display_init(void) {
-    HAL_StatusTypeDef result = HAL_LCD_Init(&hlcd);
-    ASSERT(result == HAL_OK);
+    ASSERT_HAL(HAL_LCD_Init(&hlcd));
 
-    result = HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER0, UINT32_MAX, UINT32_MAX);
-    ASSERT(result == HAL_OK);
-    result = HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER2, UINT32_MAX, UINT32_MAX);
-    ASSERT(result == HAL_OK);
-    result = HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER4, UINT32_MAX, UINT32_MAX);
-    ASSERT(result == HAL_OK);
-    result = HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER8, UINT32_MAX, UINT32_MAX);
-    ASSERT(result == HAL_OK);
-    result = HAL_LCD_UpdateDisplayRequest(&hlcd);
-    ASSERT(result == HAL_OK);
+    ASSERT_HAL(HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER0, UINT32_MAX, UINT32_MAX));
+    ASSERT_HAL(HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER2, UINT32_MAX, UINT32_MAX));
+    ASSERT_HAL(HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER4, UINT32_MAX, UINT32_MAX));
+    ASSERT_HAL(HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER8, UINT32_MAX, UINT32_MAX));
+    ASSERT_HAL(HAL_LCD_UpdateDisplayRequest(&hlcd));
 }

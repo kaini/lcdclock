@@ -19,8 +19,7 @@
             .PLLState = RCC_PLL_OFF,
         },
     };
-    HAL_StatusTypeDef result = HAL_RCC_OscConfig(&osc_init);
-    ASSERT(result == HAL_OK);
+    ASSERT_HAL(HAL_RCC_OscConfig(&osc_init));
 
     // Setup the system clock and all peripheral clocks to 1 MHz based on the MSI
     RCC_ClkInitTypeDef clk_init = {
@@ -30,16 +29,27 @@
         .APB1CLKDivider = RCC_HCLK_DIV1,
         .APB2CLKDivider = RCC_HCLK_DIV1,
     };
-    result = HAL_RCC_ClockConfig(&clk_init, FLASH_LATENCY_0);
-    ASSERT(result == HAL_OK);
+    ASSERT_HAL(HAL_RCC_ClockConfig(&clk_init, FLASH_LATENCY_0));
+
+    // Enable GPIO clocks
+    __GPIOA_CLK_ENABLE();
+    __GPIOB_CLK_ENABLE();
 
     // Clock RTC by external crystal
-    // Note: The LCD clock is driven by the RTC clock
-    __HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSE);
+    // Note: The LCD clock and RTC clock is the same thing!
+    RCC_PeriphCLKInitTypeDef periph_clk_init = {
+        .PeriphClockSelection = RCC_PERIPHCLK_RTC | RCC_PERIPHCLK_LCD,
+        .RTCClockSelection = RCC_RTCCLKSOURCE_LSE,
+        .LCDClockSelection = RCC_RTCCLKSOURCE_LSE,
+    };
+    ASSERT_HAL(HAL_RCCEx_PeriphCLKConfig(&periph_clk_init));
     __HAL_RCC_RTC_ENABLE();
+    __HAL_RCC_LCD_CLK_ENABLE();
 
+#ifndef NDEBUG
     // Output the LSE at PB13 (= MCO3) for debugging purposes
     HAL_RCC_MCOConfig(RCC_MCO3, RCC_MCO1SOURCE_LSE, RCC_MCODIV_1);
+#endif
 
     // Init drivers
     display_init();
@@ -63,11 +73,9 @@ static RTC_HandleTypeDef rtc = {
 
 int main(void) {
     initialise_monitor_handles();
-    HAL_StatusTypeDef result = HAL_Init();
-    ASSERT(result == HAL_OK);
+    ASSERT_HAL(HAL_Init());
 
-    result = HAL_RTC_Init(&rtc);
-    ASSERT(result == HAL_OK);
+    ASSERT_HAL(HAL_RTC_Init(&rtc));
 
     return 0;
 }
