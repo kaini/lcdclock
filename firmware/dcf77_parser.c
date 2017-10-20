@@ -1,6 +1,5 @@
 #include "dcf77_parser.h"
-#include "my_assert.h"
-#include "countof.h"
+#include "utils.h"
 #include <string.h>
 #include <stdio.h>
 

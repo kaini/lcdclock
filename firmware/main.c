@@ -1,81 +1,55 @@
 #include "display.h"
 #include "dcf77.h"
 #include "stm32l0xx.h"
-#include "my_assert.h"
-#include <stdbool.h>
-
-/* override */ void HAL_MspInit(void) {
-    // Go into the lowest power range
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
-
-    // Set MSI (multiple speed internal) to 1 MHz and enable LSE (low speed external clock crystal)
-    RCC_OscInitTypeDef osc_init = {
-        .OscillatorType = RCC_OSCILLATORTYPE_MSI | RCC_OSCILLATORTYPE_LSE,
-        .LSEState = RCC_LSE_ON,
-        .MSIState = RCC_MSI_ON,
-        .MSICalibrationValue = RCC_MSICALIBRATION_DEFAULT,
-        .MSIClockRange = RCC_MSIRANGE_4,
-        .PLL = {
-            .PLLState = RCC_PLL_OFF,
-        },
-    };
-    ASSERT_HAL(HAL_RCC_OscConfig(&osc_init));
-
-    // Setup the system clock and all peripheral clocks to 1 MHz based on the MSI
-    RCC_ClkInitTypeDef clk_init = {
-        .ClockType = RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2,
-        .SYSCLKSource = RCC_SYSCLKSOURCE_MSI,
-        .AHBCLKDivider = RCC_SYSCLK_DIV1,
-        .APB1CLKDivider = RCC_HCLK_DIV1,
-        .APB2CLKDivider = RCC_HCLK_DIV1,
-    };
-    ASSERT_HAL(HAL_RCC_ClockConfig(&clk_init, FLASH_LATENCY_0));
-
-    // Enable GPIO clocks
-    __GPIOA_CLK_ENABLE();
-    __GPIOB_CLK_ENABLE();
-
-    // Clock RTC by external crystal
-    // Note: The LCD clock and RTC clock is the same thing!
-    RCC_PeriphCLKInitTypeDef periph_clk_init = {
-        .PeriphClockSelection = RCC_PERIPHCLK_RTC | RCC_PERIPHCLK_LCD,
-        .RTCClockSelection = RCC_RTCCLKSOURCE_LSE,
-        .LCDClockSelection = RCC_RTCCLKSOURCE_LSE,
-    };
-    ASSERT_HAL(HAL_RCCEx_PeriphCLKConfig(&periph_clk_init));
-    __HAL_RCC_RTC_ENABLE();
-    __HAL_RCC_LCD_CLK_ENABLE();
-
-#ifndef NDEBUG
-    // Output the LSE at PB13 (= MCO3) for debugging purposes
-    HAL_RCC_MCOConfig(RCC_MCO3, RCC_MCO1SOURCE_LSE, RCC_MCODIV_1);
-#endif
-
-    // Init drivers
-    display_init();
-    dcf77_init();
-}
-
-/* override */ void SysTick_Handler(void) {
-    HAL_IncTick();
-}
+#include "utils.h"
+#include "dcf77_parser.h"
+#include <stdio.h>
 
 extern void initialise_monitor_handles(void);
 
-static RTC_HandleTypeDef rtc = {
-    .Instance = RTC,
-    .Init = {
-        .HourFormat = RTC_HOURFORMAT_24,
-        .AsynchPrediv = 127,  // divide 32768 by 128 = 256
-        .SynchPrediv = 255  // divide 256 by 256 = 1
-    }
-};
+void system_init(void) {
+	// Enable the power interface clock
+	SET_BIT(RCC->APB1ENR, RCC_APB1ENR_PWREN);
+
+	// Go into the lowest power range (Range 3)
+	while (READ_BIT(PWR->CSR, PWR_CSR_VOSF))
+		;
+	MODIFY_REG(PWR->CR, PWR_CR_VOS_Msk, 0b11 << PWR_CR_VOS_Pos);
+	while (READ_BIT(PWR->CSR, PWR_CSR_VOSF))
+		;
+
+	// Set the MSE (multiple speed internal) oscillator to 1 MHz
+	MODIFY_REG(RCC->ICSCR, RCC_ICSCR_MSIRANGE_Msk, RCC_ICSCR_MSIRANGE_4);
+	while (!READ_BIT(RCC->CR, RCC_CR_MSIRDY))
+		;
+
+	// Disable the RTC domain write protection
+	SET_BIT(PWR->CR, PWR_CR_DBP);
+
+	// Enable the 2^15 Hz LSE (low speed external) crystal and drive it in high drive mode
+	MODIFY_REG(RCC->CSR, RCC_CSR_LSEDRV_Msk, (0b11 << RCC_CSR_LSEDRV_Pos) | RCC_CSR_LSEON);
+	while (!READ_BIT(RCC->CSR, RCC_CSR_LSERDY))
+		;
+
+	// Enable GPIO clocks
+	SET_BIT(RCC->IOPENR, RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN);
+	SET_BIT(RCC->IOPSMENR, RCC_IOPSMENR_GPIOASMEN | RCC_IOPSMENR_GPIOBSMEN);
+
+	// Enable TIM2 clock
+	SET_BIT(RCC->APB1ENR, RCC_APB1ENR_TIM2EN);
+}
 
 int main(void) {
     initialise_monitor_handles();
-    ASSERT_HAL(HAL_Init());
+    system_init();
+    dcf77_init();
 
-    ASSERT_HAL(HAL_RTC_Init(&rtc));
+    dcf77_parser parser;
+    dcf77_parser_init(&parser);
+
+    dcf77_enable();
+
+    dcf77_disable();
 
     return 0;
 }

@@ -1,6 +1,6 @@
 #include "dcf77_parser.h"
 #include "dcf77_10ms_pulses.h"
-#include "my_assert.h"
+#include "utils.h"
 #include <assert.h>
 #include <stdarg.h>
 #include <setjmp.h>

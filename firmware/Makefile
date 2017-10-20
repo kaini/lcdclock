@@ -1,5 +1,5 @@
 OUTDIR := build
-C_SOURCES := $(wildcard cmsis/*.c) $(wildcard hal/*.c) $(wildcard *.c)
+C_SOURCES := $(wildcard cmsis/*.c) $(wildcard *.c)
 S_SOURCES := $(wildcard cmsis/*.s)
 C_OBJECTS := $(patsubst %.c,$(OUTDIR)/%.o,$(C_SOURCES))
 S_OBJECTS := $(patsubst %.s,$(OUTDIR)/%.o,$(S_SOURCES))
@@ -19,12 +19,12 @@ SIZE := arm-none-eabi-size
 TEST_CC := gcc
 
 COMMON_CFLAGS := \
-	-I. -Icmsis -Ihal \
-	-DSTM32L073xx -DUSE_HAL_DRIVER \
+	-I. -Icmsis \
+	-DSTM32L073xx \
 	-std=gnu11 -Wall -Wextra -Wno-unused-parameter \
 	-fno-strict-aliasing -fwrapv -g3
 TARGET_CFLAGS := \
-	-mcpu=cortex-m0plus -mfloat-abi=soft -mthumb \
+	-mcpu=cortex-m0plus -mfloat-abi=soft -mthumb --specs=nano.specs \
 	-fdata-sections -ffunction-sections -Wl,--gc-sections \
 	-fshort-enums
 TARGET_DEBUG_CFLAGS := \

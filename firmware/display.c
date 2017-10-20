@@ -1,7 +1,8 @@
 #include "display.h"
 #include "stm32l0xx.h"
-#include "my_assert.h"
+#include "utils.h"
 
+#if 0
 // 1/4 duty, 1/3 bias, 64 Hz frame time
 static LCD_HandleTypeDef hlcd = {
     .Instance = LCD,
@@ -32,13 +33,16 @@ static LCD_HandleTypeDef hlcd = {
                GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_11;
     HAL_GPIO_Init(GPIOB, &init);
 }
+#endif
 
 void display_init(void) {
-    ASSERT_HAL(HAL_LCD_Init(&hlcd));
+#if 0
+	ASSERT_HAL(HAL_LCD_Init(&hlcd));
 
     ASSERT_HAL(HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER0, UINT32_MAX, UINT32_MAX));
     ASSERT_HAL(HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER2, UINT32_MAX, UINT32_MAX));
     ASSERT_HAL(HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER4, UINT32_MAX, UINT32_MAX));
     ASSERT_HAL(HAL_LCD_Write(&hlcd, LCD_RAM_REGISTER8, UINT32_MAX, UINT32_MAX));
     ASSERT_HAL(HAL_LCD_UpdateDisplayRequest(&hlcd));
+#endif
 }

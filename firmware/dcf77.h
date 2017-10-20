@@ -1,4 +1,9 @@
 #pragma once
+#include "dcf77_parser.h"
+#include <stdbool.h>
 
 void dcf77_init(void);
-void dcf77_tick(void);
+void dcf77_enable(void);
+void dcf77_disable(void);
+
+bool dcf77_poll_samples(bool samples[DCF77_PARSER_SAMPLES_PER_SECOND]);
