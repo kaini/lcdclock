@@ -1,7 +1,6 @@
 #include "dcf77.h"
 #include "stm32l0xx.h"
 #include "utils.h"
-#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -35,6 +34,7 @@ void dcf77_init(void) {
 	MODIFY_REG(TIM2->OR, TIM2_OR_ETR_RMP_Msk, 0b101 << TIM2_OR_ETR_RMP_Pos);  // Connect to LSE
 	SET_BIT(TIM2->DIER, TIM_DIER_UIE);
 	NVIC_EnableIRQ(TIM2_IRQn);
+	NVIC_SetPriority(TIM2_IRQn, 20);
 
 	dcf77_disable();
 }

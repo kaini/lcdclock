@@ -1,7 +1,6 @@
 #include "dcf77_parser.h"
 #include "utils.h"
 #include <string.h>
-#include <stdio.h>
 
 void dcf77_parser_init(dcf77_parser* parser) {
     memset(parser->second_sync_samples, 0, sizeof(parser->second_sync_samples));
@@ -217,7 +216,9 @@ static void parse_dataframe(dcf77_parser* parser) {
     parser->frame_number += 1;
 }
 
-void dcf77_parser_feed(dcf77_parser* parser, const bool* samples) {
+bool dcf77_parser_feed(dcf77_parser* parser, const bool* samples) {
+	bool has_new_frame = false;
+
     second_sync(parser, samples);
 
     if (parser->second_start != -1) {
@@ -230,6 +231,7 @@ void dcf77_parser_feed(dcf77_parser* parser, const bool* samples) {
 
         if (parser->bit_at == parser->minute_mark) {
             parse_dataframe(parser);
+            has_new_frame = true;
         }
 
         parser->bit_at += 1;
@@ -237,6 +239,8 @@ void dcf77_parser_feed(dcf77_parser* parser, const bool* samples) {
             parser->bit_at = 0;
         }
     }
+
+    return has_new_frame;
 }
 
 static bool is_parity_valid(dcf77_bit parity, const dcf77_bit* bits, int count) {

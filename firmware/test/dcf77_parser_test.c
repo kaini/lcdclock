@@ -19,9 +19,9 @@
 #define HUNDRED(...) TEN(TEN(__VA_ARGS__))
 
 #if 0
-#define DEBUG_PRINTF(...) do { printf(__VA_ARGS__); } while (0)
+#define TEST_PRINTF(...) do { printf(__VA_ARGS__); } while (0)
 #else
-#define DEBUG_PRINTF(...) do { snprintf(NULL, 0, __VA_ARGS__); } while (0)
+#define TEST_PRINTF(...) do { snprintf(NULL, 0, __VA_ARGS__); } while (0)
 #endif
 
 static const bool MINUTE_MARK_SAMPLE[100] = { HUNDRED(1) };
@@ -119,7 +119,7 @@ static void test_dcf77_parser_parse(void** state) {
     dcf77_result frame220;
     int valid_frames = 0;
 
-    DEBUG_PRINTF("  0XXXXXXXXXXXXXXXXXXX1MMMMMMMpHHHHHHpDDDDDDWWWMMMMMJJJJJJJJPM\n");
+    TEST_PRINTF("  0XXXXXXXXXXXXXXXXXXX1MMMMMMMpHHHHHHpDDDDDDWWWMMMMMJJJJJJJJPM\n");
 
     int prev_frame = 0;
     for (int y = 0; y < DCF77_10MS_PULSES_HEIGHT; ++y) {
@@ -148,24 +148,24 @@ static void test_dcf77_parser_parse(void** state) {
                     break;
             }
 
-            DEBUG_PRINTF("+ ");
+            TEST_PRINTF("+ ");
             for (int i = 0; i < DCF77_PARSER_BITS_PER_MINUTE; ++i) {
-                DEBUG_PRINTF("%c", dcf77_bit_char(parser.new_bits[(i + parser.minute_mark + 1) % DCF77_PARSER_BITS_PER_MINUTE]));
+            	TEST_PRINTF("%c", dcf77_bit_char(parser.new_bits[(i + parser.minute_mark + 1) % DCF77_PARSER_BITS_PER_MINUTE]));
             }
-            DEBUG_PRINTF("\n= ");
+            TEST_PRINTF("\n= ");
 
             for (int i = 0; i < DCF77_PARSER_BITS_PER_MINUTE; ++i) {
-                DEBUG_PRINTF("%c", dcf77_bit_char(parser.result.bits[i]));
+            	TEST_PRINTF("%c", dcf77_bit_char(parser.result.bits[i]));
             }
-            DEBUG_PRINTF("    Valid: %c%c%c%c", result.layout_valid ? 'L' : ' ',
-                                                result.minute_valid ? 'M' : ' ',
-                                                result.hour_valid ? 'H' : ' ',
-                                                result.date_valid ? 'D' : ' ');
+            TEST_PRINTF("    Valid: %c%c%c%c", result.layout_valid ? 'L' : ' ',
+                                               result.minute_valid ? 'M' : ' ',
+                                               result.hour_valid ? 'H' : ' ',
+                                               result.date_valid ? 'D' : ' ');
             if (result.layout_valid && result.minute_valid && result.hour_valid && result.date_valid) {
                 valid_frames += 1;
-                DEBUG_PRINTF("    %02d.%02d.%04d %02d:%02d", result.day, result.month, result.year + 2000, result.hour, result.minute);
+                TEST_PRINTF("    %02d.%02d.%04d %02d:%02d", result.day, result.month, result.year + 2000, result.hour, result.minute);
             }
-            DEBUG_PRINTF("    Frame: %d\n", result.frame_number);
+            TEST_PRINTF("    Frame: %d\n", result.frame_number);
         }
     }
 

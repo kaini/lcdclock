@@ -84,8 +84,8 @@ typedef struct dcf77_result {
 // Initialize a dcf77_parser structure. There is no need to free it.
 void dcf77_parser_init(dcf77_parser* parser);
 
-// Feeds one second of samples into the parser. Returns true once a result is ready.
-void dcf77_parser_feed(dcf77_parser* parser, const bool* samples);
+// Feeds one second of samples into the parser. Returns true once a new frame is ready.
+bool dcf77_parser_feed(dcf77_parser* parser, const bool* samples);
 
 // Gets the current result.
 dcf77_result dcf77_parser_result(const dcf77_parser* parser);
