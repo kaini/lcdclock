@@ -64,16 +64,17 @@ void dcf77_disable(void) {
 	CLEAR_BIT(VCC_GPIO->ODR, GPIO_ODR_OD(VCC_PIN));
 }
 
-bool dcf77_poll_samples(bool output_samples[DCF77_PARSER_SAMPLES_PER_SECOND]) {
+bool dcf77_samples_pending() {
+	return samples_read != NULL;
+}
+
+void dcf77_clear_samples_pending(bool output_samples[DCF77_PARSER_SAMPLES_PER_SECOND]) {
 	volatile const bool* current_samples = samples_read;
-	if (current_samples) {
-		samples_read = NULL;
+	samples_read = NULL;
+	if (output_samples != NULL) {
 		for (int i = 0; i < DCF77_PARSER_SAMPLES_PER_SECOND; ++i) {
 			output_samples[i] = current_samples[i];
 		}
-		return true;
-	} else {
-		return false;
 	}
 }
 

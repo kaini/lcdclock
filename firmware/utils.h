@@ -1,7 +1,7 @@
 #pragma once
 #include "stm32l0xx.h"
+#include "SEGGER_RTT.h"
 #include <assert.h>
-#include <stdio.h>
 
 #define CONCAT_IMPL(A, B) A ## B
 #define CONCAT(A, B) CONCAT_IMPL(A, B)
@@ -17,7 +17,7 @@
 #ifdef NDEBUG
 	#define DEBUG_PRINTF() do { } while (0)
 #else
-	#define DEBUG_PRINTF(...) do { fprintf(stdout, __VA_ARGS__); } while (0)
+	#define DEBUG_PRINTF(...) do { SEGGER_RTT_printf(0, __VA_ARGS__); } while (0)
 #endif
 
 typedef uint32_t critical_section_handle;

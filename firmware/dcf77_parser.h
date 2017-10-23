@@ -29,7 +29,10 @@ typedef struct dcf77_parser {
         dcf77_bit bits[DCF77_PARSER_BITS_PER_MINUTE];
         struct {
             dcf77_bit zero;
-            dcf77_bit ignored0[14 + 1 + 3 + 1];  // weather data + callbit + DST bits + leap second bit
+            dcf77_bit ignored0[14 + 1 + 1]; // weather data + callbit + DST in next hour
+            dcf77_bit in_dst;
+            dcf77_bit not_in_dst;
+            dcf77_bit ignored1[1]; // leap second bit
             dcf77_bit one;
             union {
                 dcf77_bit minute_bits[4 + 3];
@@ -79,6 +82,7 @@ typedef struct dcf77_result {
     int day;
     int month;
     int year;
+    bool dst;
 } dcf77_result;
 
 // Initialize a dcf77_parser structure. There is no need to free it.

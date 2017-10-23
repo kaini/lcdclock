@@ -37,7 +37,7 @@ SECTIONS
     .bss : ALIGN(4)
     {
         _sbss = .;
-        *(.bss .bss.*)
+        *(.bss .bss.* COMMON COMMON.*)
         . = ALIGN(4);
         _ebss = .;
     } >RAM
@@ -46,4 +46,6 @@ SECTIONS
     end = .;  /* heap start */
     . = ORIGIN(RAM) + LENGTH(RAM) - 4;
     _estack = .;  /* stack start */
+    
+    ASSERT(_ebss == end, "There is something beween _ebss and end")
 }

@@ -1,13 +1,14 @@
 OUTDIR := build
-C_SOURCES := $(wildcard cmsis/*.c) $(wildcard *.c)
+C_SOURCES := $(wildcard cmsis/*.c) $(wildcard segger_rtt/*.c) $(wildcard *.c)
 S_SOURCES := $(wildcard cmsis/*.s)
 C_OBJECTS := $(patsubst %.c,$(OUTDIR)/%.o,$(C_SOURCES))
 S_OBJECTS := $(patsubst %.s,$(OUTDIR)/%.o,$(S_SOURCES))
-FIRMWARE := $(OUTDIR)/firmware
+FIRMWARE_ELF := $(OUTDIR)/firmware.elf
+FIRMWARE_BIN := $(OUTDIR)/firmware.bin
 
 TEST_C_SOURCES := $(wildcard test/*.c) dcf77_parser.c
 TEST_C_OBJECTS := $(patsubst %.c,$(OUTDIR)/%.test.o,$(TEST_C_SOURCES))
-TEST_EXE := $(OUTDIR)/testrunner
+TEST_EXE := $(OUTDIR)/testrunner.exe
 
 RM := rm -rf
 MKDIR := mkdir -p
@@ -19,18 +20,19 @@ SIZE := arm-none-eabi-size
 TEST_CC := gcc
 
 COMMON_CFLAGS := \
-	-I. -Icmsis \
+	-I. -Icmsis -Isegger_rtt \
 	-DSTM32L073xx \
 	-std=gnu11 -Wall -Wextra -Wno-unused-parameter \
 	-fno-strict-aliasing -fwrapv -g3
 TARGET_CFLAGS := \
-	-mcpu=cortex-m0plus -mfloat-abi=soft -mthumb --specs=nano.specs \
+	-mcpu=cortex-m0plus -mfloat-abi=soft -mthumb \
+	--specs=nosys.specs \
 	-fdata-sections -ffunction-sections -Wl,--gc-sections \
 	-fshort-enums
 TARGET_DEBUG_CFLAGS := \
-	-Og --specs=rdimon.specs
+	-Og
 TARGET_RELEASE_CFLAGS := \
-	-DNDEBUG -flto -O3 --specs=nosys.specs
+	-DNDEBUG -flto -O3
 TEST_CFLAGS := \
 	-O0
 
@@ -48,15 +50,15 @@ TEST_LIBS := -lcmocka
 .SUFFIXES:  # disable builtin rules
 .PHONY: clean test flash
 
-all: $(FIRMWARE).elf $(FIRMWARE).bin test
+all: $(FIRMWARE_ELF) $(FIRMWARE_BIN) test
 
 test: $(TEST_EXE)
-	$(TEST_EXE)
+	$<
 
-flash: $(FIRMWARE).bin | flash.jlink
+flash: $(FIRMWARE_BIN) | flash.jlink
 	$(JLINK) -CommandFile flash.jlink
 
-$(FIRMWARE).elf: $(S_OBJECTS) $(C_OBJECTS) | linker.ld
+$(FIRMWARE_ELF): $(S_OBJECTS) $(C_OBJECTS) | linker.ld
 	@$(MKDIR) $(@D)
 	$(CC) $(FINAL_TARGET_CFLAGS) -T linker.ld -o $@ $^
 	$(SIZE) $@

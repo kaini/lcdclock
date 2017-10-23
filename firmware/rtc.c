@@ -2,6 +2,8 @@
 #include "stm32l0xx.h"
 #include "utils.h"
 
+static volatile bool second_pending = false;
+
 void rtc_init(void) {
 	// Unlock the RTC registers
 	WRITE_REG(RTC->WPR, 0xCA);
@@ -42,6 +44,14 @@ void rtc_init(void) {
 	WRITE_REG(RTC->WPR, 0x64);
 }
 
+bool rtc_second_pending(void) {
+	return second_pending;
+}
+
+void rtc_clear_second_pending(void) {
+	second_pending = false;
+}
+
 rtc_time rtc_get_time(void) {
 	uint32_t time_register = 0;
 	uint32_t time_register_read = 0;
@@ -61,6 +71,7 @@ rtc_time rtc_get_time(void) {
 		.hour = ((time_register & RTC_TR_HT_Msk) >> RTC_TR_HT_Pos) * 10 + ((time_register & RTC_TR_HU_Msk) >> RTC_TR_HU_Pos),
 		.minute = ((time_register & RTC_TR_MNT_Msk) >> RTC_TR_MNT_Pos) * 10 + ((time_register & RTC_TR_MNU_Msk) >> RTC_TR_MNU_Pos),
 		.second = ((time_register & RTC_TR_ST_Msk) >> RTC_TR_ST_Pos) * 10 + ((time_register & RTC_TR_SU_Msk) >> RTC_TR_SU_Pos),
+		.dst = READ_BIT(RTC->CR, RTC_CR_BCK),
 	};
 	return result;
 }
@@ -98,6 +109,12 @@ void rtc_set_time(const rtc_time* time) {
 			RTC_DR_YT_Msk | RTC_DR_YU_Msk | RTC_DR_MT_Msk | RTC_DR_MU_Msk | RTC_DR_DT_Msk | RTC_DR_DU_Msk,
 			dr_set);
 
+	if (time->dst) {
+		SET_BIT(RTC->CR, RTC_CR_BCK);
+	} else {
+		CLEAR_BIT(RTC->CR, RTC_CR_BCK);
+	}
+
 	// Quit init mode
 	CLEAR_BIT(RTC->ISR, RTC_ISR_INIT);
 	// Lock the RTC registers
@@ -110,6 +127,7 @@ void RTC_IRQHandler(void) {
 		CLEAR_BIT(RTC->ISR, RTC_ISR_ALRAF);
 		if (READ_BIT(EXTI->PR, EXTI_PR_PIF17)) {
 			SET_BIT(EXTI->PR, EXTI_PR_PIF17);
+			second_pending = true;
 		}
 	}
 }

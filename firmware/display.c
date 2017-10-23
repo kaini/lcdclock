@@ -34,7 +34,7 @@ void display_init(void) {
 	// 1/3 bias, 1/4 duty, external voltage
 	MODIFY_REG(LCD->CR, LCD_CR_BIAS_Msk | LCD_CR_DUTY_Msk, (0b10 << LCD_CR_BIAS_Pos) | (0b011 << LCD_CR_DUTY_Pos) | LCD_CR_VSEL);
 
-	// 32768 rtc / 2^4 prescaler / 16 divider = 128 Hz; 128 Hz / 4 duty -> 32 Hz
+	// 32768 rtc / 2^3 prescaler / 16 divider = 256 Hz; 256 Hz / 4 duty -> 64 Hz
 	MODIFY_REG(
 			LCD->FCR,
 			LCD_FCR_PS_Msk | LCD_FCR_DIV_Msk | LCD_FCR_PON_Msk | LCD_FCR_DEAD_Msk,

@@ -174,26 +174,30 @@ static void test_dcf77_parser_parse(void** state) {
     assert_int_equal(frame6.day, 10);
     assert_int_equal(frame6.hour, 21);
     assert_int_equal(frame6.minute, 42);
+    assert_true(frame6.dst);
 
     assert_int_equal(frame7.year, 8);
     assert_int_equal(frame7.month, 7);
     assert_int_equal(frame7.day, 10);
     assert_int_equal(frame7.hour, 21);
     assert_int_equal(frame7.minute, 43);
+    assert_true(frame7.dst);
 
     assert_int_equal(frame9.year, 8);
     assert_int_equal(frame9.month, 7);
     assert_int_equal(frame9.day, 10);
     assert_int_equal(frame9.hour, -1);
     assert_int_equal(frame9.minute, -1);
+    assert_true(frame9.dst);
 
     assert_int_equal(frame220.year, 8);
     assert_int_equal(frame220.month, 7);
     assert_int_equal(frame220.day, 11);
     assert_int_equal(frame220.hour, 1);
     assert_int_equal(frame220.minute, 16);
+    assert_true(frame220.dst);
 
-    assert_int_equal(valid_frames, 61);
+    assert_int_equal(valid_frames, 57);
 }
 
 int main(void) {

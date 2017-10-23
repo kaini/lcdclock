@@ -275,7 +275,11 @@ dcf77_result dcf77_parser_result(const dcf77_parser* parser) {
     
     result.layout_valid = parser->result.zero == DCF77_BIT_ZERO &&
                           parser->result.one == DCF77_BIT_ONE &&
-                          parser->result.minute_mark == DCF77_BIT_MINUTE_MARK;
+                          parser->result.minute_mark == DCF77_BIT_MINUTE_MARK &&
+						  (
+								  (parser->result.in_dst == DCF77_BIT_ONE && parser->result.not_in_dst == DCF77_BIT_ZERO) ||
+								  (parser->result.in_dst == DCF77_BIT_ZERO && parser->result.not_in_dst == DCF77_BIT_ONE)
+						  );
     result.minute_valid = is_parity_valid(parser->result.minute_parity,
                                           parser->result.minute_bits,
                                           COUNTOF(parser->result.minute_bits));
@@ -312,6 +316,8 @@ dcf77_result dcf77_parser_result(const dcf77_parser* parser) {
         result.month = -1;
         result.year = -1;
     }
+
+    result.dst = parser->result.in_dst == DCF77_BIT_ONE;
 
     return result;
 }
