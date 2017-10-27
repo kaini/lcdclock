@@ -269,55 +269,69 @@ static int parse_valid_number(const dcf77_bit* bits, int count) {
     return result;
 }
 
-dcf77_result dcf77_parser_result(const dcf77_parser* parser) {
-    dcf77_result result;
-    result.frame_number = parser->frame_number;
-    
-    result.layout_valid = parser->result.zero == DCF77_BIT_ZERO &&
-                          parser->result.one == DCF77_BIT_ONE &&
-                          parser->result.minute_mark == DCF77_BIT_MINUTE_MARK &&
-						  (
-								  (parser->result.in_dst == DCF77_BIT_ONE && parser->result.not_in_dst == DCF77_BIT_ZERO) ||
-								  (parser->result.in_dst == DCF77_BIT_ZERO && parser->result.not_in_dst == DCF77_BIT_ONE)
-						  );
-    result.minute_valid = is_parity_valid(parser->result.minute_parity,
-                                          parser->result.minute_bits,
-                                          COUNTOF(parser->result.minute_bits));
-    result.hour_valid = is_parity_valid(parser->result.hour_parity,
-                                        parser->result.hour_bits,
-                                        COUNTOF(parser->result.hour_bits));
-    result.date_valid = is_parity_valid(parser->result.date_parity,
-                                        parser->result.date_bits,
-                                        COUNTOF(parser->result.date_bits));
+bool dcf77_parser_result(const dcf77_parser* parser, struct tm* result) {
+    // Note: Slightly out of bounds values do not lead to errors. The time functions
+    // handle "overflows" gracefully by adding the overflowing values to the real value.
+    // This "just" leads to wrong data.
 
-    if (result.minute_valid) {
-        result.minute = parse_valid_number(parser->result.minute_ones, COUNTOF(parser->result.minute_ones)) +
-                        parse_valid_number(parser->result.minute_tens, COUNTOF(parser->result.minute_tens)) * 10;
-    } else {
-        result.minute = -1;
+	bool layout_valid = parser->result.zero == DCF77_BIT_ZERO &&
+                        parser->result.one == DCF77_BIT_ONE &&
+                        parser->result.minute_mark == DCF77_BIT_MINUTE_MARK &&
+						(
+						    (parser->result.in_dst == DCF77_BIT_ONE && parser->result.not_in_dst == DCF77_BIT_ZERO) ||
+						    (parser->result.in_dst == DCF77_BIT_ZERO && parser->result.not_in_dst == DCF77_BIT_ONE)
+						);
+	if (!layout_valid) {
+		return false;
+	}
+
+    bool minute_valid = is_parity_valid(parser->result.minute_parity,
+                                        parser->result.minute_bits,
+                                        COUNTOF(parser->result.minute_bits));
+    if (!minute_valid) {
+    	return false;
+    }
+    result->tm_min = parse_valid_number(parser->result.minute_ones, COUNTOF(parser->result.minute_ones)) +
+                     parse_valid_number(parser->result.minute_tens, COUNTOF(parser->result.minute_tens)) * 10;
+    if (result->tm_min < 0 || result->tm_min > 59) {
+    	return false;
     }
 
-    if (result.hour_valid) {
-        result.hour = parse_valid_number(parser->result.hour_ones, COUNTOF(parser->result.hour_ones)) +
+    bool hour_valid = is_parity_valid(parser->result.hour_parity,
+                                      parser->result.hour_bits,
+                                      COUNTOF(parser->result.hour_bits));
+    if (!hour_valid) {
+    	return false;
+    }
+    result->tm_hour = parse_valid_number(parser->result.hour_ones, COUNTOF(parser->result.hour_ones)) +
                       parse_valid_number(parser->result.hour_tens, COUNTOF(parser->result.hour_tens)) * 10;
-    } else {
-        result.hour = -1;
+    if (result->tm_hour < 0 || result->tm_hour > 23) {
+        return false;
     }
 
-    if (result.date_valid) {
-        result.day = parse_valid_number(parser->result.day_ones, COUNTOF(parser->result.day_ones)) +
-                     parse_valid_number(parser->result.day_tens, COUNTOF(parser->result.day_tens)) * 10;
-        result.month = parse_valid_number(parser->result.month_ones, COUNTOF(parser->result.month_ones)) +
-                       parse_valid_number(parser->result.month_tens, COUNTOF(parser->result.month_tens)) * 10;
-        result.year = parse_valid_number(parser->result.year_ones, COUNTOF(parser->result.year_ones)) +
+    bool date_valid = is_parity_valid(parser->result.date_parity,
+                                      parser->result.date_bits,
+                                      COUNTOF(parser->result.date_bits));
+    if (!date_valid) {
+        return false;
+    }
+    result->tm_mday = parse_valid_number(parser->result.day_ones, COUNTOF(parser->result.day_ones)) +
+                      parse_valid_number(parser->result.day_tens, COUNTOF(parser->result.day_tens)) * 10;
+    result->tm_mon = parse_valid_number(parser->result.month_ones, COUNTOF(parser->result.month_ones)) +
+                     parse_valid_number(parser->result.month_tens, COUNTOF(parser->result.month_tens)) * 10;
+    result->tm_year = 100 +
+                      parse_valid_number(parser->result.year_ones, COUNTOF(parser->result.year_ones)) +
                       parse_valid_number(parser->result.year_tens, COUNTOF(parser->result.year_tens)) * 10;
-    } else {
-        result.day = -1;
-        result.month = -1;
-        result.year = -1;
+    if (result->tm_mon < 1 || result->tm_mon > 12) {
+        return false;
+    }
+    if (result->tm_mday < 1 || result->tm_mday > 31) {
+        return false;
     }
 
-    result.dst = parser->result.in_dst == DCF77_BIT_ONE;
+    result->tm_isdst = parser->result.in_dst == DCF77_BIT_ONE;
 
-    return result;
+	result->tm_sec = 0;
+
+	return mktime(result) != (time_t)(-1);
 }

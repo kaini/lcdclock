@@ -7,6 +7,7 @@
 #include <cmocka.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define TWO(...) __VA_ARGS__, __VA_ARGS__
 #define THREE(...) __VA_ARGS__, __VA_ARGS__, __VA_ARGS__
@@ -17,12 +18,6 @@
 #define EIGHTY(...) TEN(TWO(TWO(TWO(__VA_ARGS__))))
 #define NINETY(...) TEN(THREE(THREE(__VA_ARGS__)))
 #define HUNDRED(...) TEN(TEN(__VA_ARGS__))
-
-#if 0
-#define TEST_PRINTF(...) do { printf(__VA_ARGS__); } while (0)
-#else
-#define TEST_PRINTF(...) do { snprintf(NULL, 0, __VA_ARGS__); } while (0)
-#endif
 
 static const bool MINUTE_MARK_SAMPLE[100] = { HUNDRED(1) };
 static const bool ZERO_SAMPLE[100] = { TEN(0), NINETY(1) };
@@ -93,114 +88,68 @@ static void test_dcf77_parser_minute_mark(void** state) {
     }
 }
 
-static char dcf77_bit_char(dcf77_bit bit) {
-    switch (bit) {
-        case DCF77_BIT_UNKNOWN:
-            return '_';
-        case DCF77_BIT_ZERO:
-            return '0';
-        case DCF77_BIT_ONE:
-            return '1';
-        case DCF77_BIT_MINUTE_MARK:
-            return 'M';
-        default:
-            ASSERT(false);
-            return '?';
-    }
-}
-
 static void test_dcf77_parser_parse(void** state) {
     dcf77_parser parser;
     dcf77_parser_init(&parser);
 
-    dcf77_result frame6;
-    dcf77_result frame7;
-    dcf77_result frame9;
-    dcf77_result frame220;
+    struct tm frame6;
+    struct tm frame7;
+    struct tm frame220;
     int valid_frames = 0;
-
-    TEST_PRINTF("  0XXXXXXXXXXXXXXXXXXX1MMMMMMMpHHHHHHpDDDDDDWWWMMMMMJJJJJJJJPM\n");
-
-    int prev_frame = 0;
+    int frame_number = 0;
     for (int y = 0; y < DCF77_10MS_PULSES_HEIGHT; ++y) {
         bool samples[DCF77_10MS_PULSES_WIDTH];
         for (int x = 0; x < DCF77_10MS_PULSES_WIDTH; ++x) {
             samples[x] = DCF77_10MS_PULSES[y][x] == ' ';
         }
-        dcf77_parser_feed(&parser, samples);
 
-        dcf77_result result = dcf77_parser_result(&parser);
-        if (result.frame_number != prev_frame) {
-            prev_frame = result.frame_number;
-
-            switch (result.frame_number) {
-                case 6:
-                    frame6 = result;
-                    break;
-                case 7:
-                    frame7 = result;
-                    break;
-                case 9:
-                    frame9 = result;
-                    break;
-                case 220:
-                    frame220 = result;
-                    break;
-            }
-
-            TEST_PRINTF("+ ");
-            for (int i = 0; i < DCF77_PARSER_BITS_PER_MINUTE; ++i) {
-            	TEST_PRINTF("%c", dcf77_bit_char(parser.new_bits[(i + parser.minute_mark + 1) % DCF77_PARSER_BITS_PER_MINUTE]));
-            }
-            TEST_PRINTF("\n= ");
-
-            for (int i = 0; i < DCF77_PARSER_BITS_PER_MINUTE; ++i) {
-            	TEST_PRINTF("%c", dcf77_bit_char(parser.result.bits[i]));
-            }
-            TEST_PRINTF("    Valid: %c%c%c%c", result.layout_valid ? 'L' : ' ',
-                                               result.minute_valid ? 'M' : ' ',
-                                               result.hour_valid ? 'H' : ' ',
-                                               result.date_valid ? 'D' : ' ');
-            if (result.layout_valid && result.minute_valid && result.hour_valid && result.date_valid) {
+        if (dcf77_parser_feed(&parser, samples)) {
+            frame_number += 1;
+            struct tm result;
+            if (dcf77_parser_result(&parser, &result)) {
                 valid_frames += 1;
-                TEST_PRINTF("    %02d.%02d.%04d %02d:%02d", result.day, result.month, result.year + 2000, result.hour, result.minute);
+                switch (frame_number) {
+                    case 6:
+                        frame6 = result;
+                        break;
+                    case 7:
+                        frame7 = result;
+                        break;
+                    case 220:
+                        frame220 = result;
+                        break;
+                }
             }
-            TEST_PRINTF("    Frame: %d\n", result.frame_number);
         }
     }
 
-    assert_int_equal(frame6.year, 8);
-    assert_int_equal(frame6.month, 7);
-    assert_int_equal(frame6.day, 10);
-    assert_int_equal(frame6.hour, 21);
-    assert_int_equal(frame6.minute, 42);
-    assert_true(frame6.dst);
-
-    assert_int_equal(frame7.year, 8);
-    assert_int_equal(frame7.month, 7);
-    assert_int_equal(frame7.day, 10);
-    assert_int_equal(frame7.hour, 21);
-    assert_int_equal(frame7.minute, 43);
-    assert_true(frame7.dst);
-
-    assert_int_equal(frame9.year, 8);
-    assert_int_equal(frame9.month, 7);
-    assert_int_equal(frame9.day, 10);
-    assert_int_equal(frame9.hour, -1);
-    assert_int_equal(frame9.minute, -1);
-    assert_true(frame9.dst);
-
-    assert_int_equal(frame220.year, 8);
-    assert_int_equal(frame220.month, 7);
-    assert_int_equal(frame220.day, 11);
-    assert_int_equal(frame220.hour, 1);
-    assert_int_equal(frame220.minute, 16);
-    assert_true(frame220.dst);
-
     assert_int_equal(valid_frames, 57);
+
+    assert_int_equal(frame6.tm_year, 108);
+    assert_int_equal(frame6.tm_mon, 7);
+    assert_int_equal(frame6.tm_mday, 10);
+    assert_int_equal(frame6.tm_hour, 21);
+    assert_int_equal(frame6.tm_min, 42);
+    assert_true(frame6.tm_isdst);
+
+    assert_int_equal(frame7.tm_year, 108);
+    assert_int_equal(frame7.tm_mon, 7);
+    assert_int_equal(frame7.tm_mday, 10);
+    assert_int_equal(frame7.tm_hour, 21);
+    assert_int_equal(frame7.tm_min, 43);
+    assert_true(frame7.tm_isdst);
+
+    assert_int_equal(frame220.tm_year, 108);
+    assert_int_equal(frame220.tm_mon, 7);
+    assert_int_equal(frame220.tm_mday, 11);
+    assert_int_equal(frame220.tm_hour, 1);
+    assert_int_equal(frame220.tm_min, 16);
+    assert_true(frame220.tm_isdst);
 }
 
 int main(void) {
+    putenv("TZ=CET-1CEST-2,M3.5.0/2,M10.5.0/3");
+    tzset();
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_dcf77_parser_second_sync),
         cmocka_unit_test(test_dcf77_parser_minute_mark),

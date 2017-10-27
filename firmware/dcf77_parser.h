@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <time.h>
 
 #define DCF77_PARSER_SAMPLES_PER_SECOND 100
 #define DCF77_PARSER_BITS_PER_MINUTE 60
@@ -69,28 +70,14 @@ typedef struct dcf77_parser {
     int frame_number;
 } dcf77_parser;
 
-typedef struct dcf77_result {
-    int frame_number;
-
-    bool layout_valid;
-    bool minute_valid;
-    bool hour_valid;
-    bool date_valid;
-
-    int minute;
-    int hour;
-    int day;
-    int month;
-    int year;
-    bool dst;
-} dcf77_result;
-
 // Initialize a dcf77_parser structure. There is no need to free it.
 void dcf77_parser_init(dcf77_parser* parser);
 
 // Feeds one second of samples into the parser. Returns true once a new frame is ready.
 bool dcf77_parser_feed(dcf77_parser* parser, const bool* samples);
 
-// Gets the current result.
-dcf77_result dcf77_parser_result(const dcf77_parser* parser);
+// Gets the current result. Returns true if the result is valid. Note that the
+// result might be written to even if the return value is false.
+// This function assumes the local timezone to be CET/CEST with correct DST rules!
+bool dcf77_parser_result(const dcf77_parser* parser, struct tm* result);
 

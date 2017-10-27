@@ -36,15 +36,13 @@ TARGET_RELEASE_CFLAGS := \
 TEST_CFLAGS := \
 	-O0
 
-FINAL_TARGET_CFLAGS := $(COMMON_CFLAGS) $(TARGET_CFLAGS)
+CFLAGS := $(COMMON_CFLAGS) $(TARGET_CFLAGS)
 ifdef RELEASE
-	FINAL_TARGET_CFLAGS += $(TARGET_RELEASE_CFLAGS)
+	CFLAGS += $(TARGET_RELEASE_CFLAGS)
 else
-	FINAL_TARGET_CFLAGS += $(TARGET_DEBUG_CFLAGS)
+	CFLAGS += $(TARGET_DEBUG_CFLAGS)
 endif
-
-FINAL_TEST_CFLAGS := $(COMMON_CFLAGS) $(TEST_CFLAGS)
-
+TEST_CFLAGS := $(COMMON_CFLAGS) $(TEST_CFLAGS)
 TEST_LIBS := -lcmocka
 
 .SUFFIXES:  # disable builtin rules
@@ -60,12 +58,12 @@ flash: $(FIRMWARE_BIN) | flash.jlink
 
 $(FIRMWARE_ELF): $(S_OBJECTS) $(C_OBJECTS) | linker.ld
 	@$(MKDIR) $(@D)
-	$(CC) $(FINAL_TARGET_CFLAGS) -T linker.ld -o $@ $^
+	$(CC) $(CFLAGS) -T linker.ld -o $@ $^
 	$(SIZE) $@
 
 $(TEST_EXE): $(TEST_C_OBJECTS)
 	@$(MKDIR) $(@D)
-	$(TEST_CC) $(FINAL_TEST_CFLAGS) -o $@ $^ $(TEST_LIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(TEST_LIBS)
 
 -include $(patsubst %.o,%.d,$(C_OBJECTS))
 -include $(patsubst %.o,%.d,$(S_OBJECTS))
@@ -77,15 +75,15 @@ $(TEST_EXE): $(TEST_C_OBJECTS)
 
 $(C_OBJECTS): $(OUTDIR)/%.o: %.c
 	@$(MKDIR) $(@D)
-	$(CC) $(FINAL_TARGET_CFLAGS) -MD -c -o $@ $<
+	$(CC) $(CFLAGS) -MD -c -o $@ $<
 
 $(S_OBJECTS): $(OUTDIR)/%.o: %.s
 	@$(MKDIR) $(@D)
-	$(CC) $(FINAL_TARGET_CFLAGS) -MD -c -o $@ $<
+	$(CC) $(CFLAGS) -MD -c -o $@ $<
 
 $(TEST_C_OBJECTS): $(OUTDIR)/%.test.o: %.c
 	@$(MKDIR) $(@D)
-	$(TEST_CC) $(FINAL_TEST_CFLAGS) -MD -c -o $@ $<
+	$(TEST_CC) $(TEST_CFLAGS) -MD -c -o $@ $<
 
 clean:
 	$(RM) $(OUTDIR)
