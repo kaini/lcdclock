@@ -1,8 +1,7 @@
-#include "dcf77.h"
-#include "stm32l0xx.h"
-#include "utils.h"
-#include <stdbool.h>
-#include <string.h>
+#include "dcf77.hpp"
+#include "utils.hpp"
+#include "dcf77_parser.hpp"
+#include <stm32l0xx.h>
 
 #define VCC_GPIO GPIOB
 #define VCC_PIN 6
@@ -10,8 +9,8 @@
 #define SIGNAL_GPIO GPIOB
 #define SIGNAL_PIN 7
 
-static volatile bool samples_a[DCF77_PARSER_SAMPLES_PER_SECOND] = {};
-static volatile bool samples_b[DCF77_PARSER_SAMPLES_PER_SECOND] = {};
+static volatile bool samples_a[dcf77_parser::samples_per_second] = {};
+static volatile bool samples_b[dcf77_parser::samples_per_second] = {};
 static volatile const bool* volatile samples_read = NULL;
 static volatile bool* volatile samples_write = NULL;
 static volatile int write_at = 0;
@@ -68,17 +67,17 @@ bool dcf77_samples_pending() {
 	return samples_read != NULL;
 }
 
-void dcf77_clear_samples_pending(bool output_samples[DCF77_PARSER_SAMPLES_PER_SECOND]) {
+void dcf77_clear_samples_pending(bool output_samples[dcf77_parser::samples_per_second]) {
 	volatile const bool* current_samples = samples_read;
 	samples_read = NULL;
 	if (output_samples != NULL) {
-		for (int i = 0; i < DCF77_PARSER_SAMPLES_PER_SECOND; ++i) {
+		for (int i = 0; i < dcf77_parser::samples_per_second; ++i) {
 			output_samples[i] = current_samples[i];
 		}
 	}
 }
 
-/* override */ void TIM2_IRQHandler(void) {
+extern "C" void TIM2_IRQHandler(void) {
 	if (READ_BIT(TIM2->SR, TIM_SR_UIF)) {
 		CLEAR_BIT(TIM2->SR, TIM_SR_UIF);
 
@@ -87,7 +86,7 @@ void dcf77_clear_samples_pending(bool output_samples[DCF77_PARSER_SAMPLES_PER_SE
 
 		samples[at++] = READ_BIT(SIGNAL_GPIO->IDR, GPIO_IDR_ID(SIGNAL_PIN));
 
-		if (at >= DCF77_PARSER_SAMPLES_PER_SECOND) {
+		if (at >= dcf77_parser::samples_per_second) {
 			samples_read = samples;
 			samples_write = (samples == samples_a) ? samples_b : samples_a;
 			at = 0;

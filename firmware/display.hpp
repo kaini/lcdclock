@@ -1,5 +1,4 @@
 #pragma once
-#include <stdbool.h>
 
 enum display_digit {
 	DISPLAY_DIGIT_0 = 0,
@@ -17,7 +16,7 @@ enum display_digit {
 };
 
 struct display_content {
-	enum display_digit digits[6];
+	display_digit digits[6];
 	bool dots[4];
 	bool colon;
 };

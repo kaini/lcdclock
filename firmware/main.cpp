@@ -1,13 +1,11 @@
-#include "display.h"
-#include "dcf77.h"
-#include "stm32l0xx.h"
-#include "utils.h"
-#include "dcf77_parser.h"
-#include "rtc.h"
-#include <string.h>
-#include <time.h>
+#include "dcf77.hpp"
+#include "dcf77_parser.hpp"
+#include "display.hpp"
+#include "rtc.hpp"
+#include "utils.hpp"
+#include <stm32l0xx.h>
 
-void power_clock_init(void) {
+void power_clock_init() {
 	// Enable the power interface clock
 	SET_BIT(RCC->APB1ENR, RCC_APB1ENR_PWREN);
 
@@ -47,72 +45,57 @@ void power_clock_init(void) {
 	SET_BIT(RCC->APB1SMENR, RCC_APB1SMENR_TIM2SMEN);
 }
 
-int main(void) {
-	__disable_irq();
-	power_clock_init();
+int main() {
+    __disable_irq();
+    power_clock_init();
     dcf77_init();
     display_init();
-    rtc_init();
-    setenv("TZ", "CET-1CEST-2,M3.5.0/2,M10.5.0/3", 1);
-    tzset();
+    rtc rtc;
     __enable_irq();
 
     bool need_sync = true;
     bool syncing = false;
     dcf77_parser parser;
-    int valid_frames = 0;
 
     while (true) {
-    	struct tm now;
-    	rtc_get_time(&now);
+        auto now = rtc.get_time();
     	bool need_display_refresh = false;
 
     	if (need_sync && !syncing) {
 			syncing = true;
-			dcf77_parser_init(&parser);
-			valid_frames = 0;
+			parser = dcf77_parser();
 			dcf77_enable();
 	    	display_content.dots[1] = true;
 	    	need_display_refresh = true;
     	}
 
     	if (syncing && dcf77_samples_pending()) {
-    		bool samples[DCF77_PARSER_SAMPLES_PER_SECOND];
+    		bool samples[dcf77_parser::samples_per_second];
     		dcf77_clear_samples_pending(samples);
-			if (dcf77_parser_feed(&parser, samples)) {
-			    struct tm received_time;
-			    if (dcf77_parser_result(&parser, &received_time)) {
-			        valid_frames += 1;
-			        if (valid_frames >= 2) {
-                        time_t time = mktime(&received_time);
-                        struct tm utc_time;
-                        gmtime_r(&time, &utc_time);
-                        rtc_set_time(&utc_time);
-
-                        need_sync = false;
-                        syncing = false;
-                        dcf77_disable();
-                        display_content.dots[1] = false;
-                        need_display_refresh = true;
-                    }
-			    } else {
-			        valid_frames = 0;
-			    }
+			if (auto frame = parser.feed(samples)) {
+			    rtc.set_time(*frame);
+                need_sync = false;
+                syncing = false;
+                dcf77_disable();
+                display_content.dots[1] = false;
+                need_display_refresh = true;
 			}
     	}
 
-    	if (rtc_second_pending()) {
-    		rtc_clear_second_pending();
-			if (now.tm_hour < 10) {
+    	if (rtc.second_pending()) {
+    		rtc.clear_second_pending();
+
+    		datetime localtime = now;
+			if (localtime.hour() < 10) {
 				display_content.digits[0] = DISPLAY_DIGIT_NONE;
 			} else {
-				display_content.digits[0] = now.tm_hour / 10;
+				display_content.digits[0] = static_cast<display_digit>(localtime.hour() / 10);
 			}
-			display_content.digits[1] = now.tm_hour % 10;
-			display_content.digits[2] = now.tm_min / 10;
-			display_content.digits[3] = now.tm_min % 10;
-			display_content.digits[4] = now.tm_sec / 10;
-			display_content.digits[5] = now.tm_sec % 10;
+			display_content.digits[1] = static_cast<display_digit>(localtime.hour() % 10);
+			display_content.digits[2] = static_cast<display_digit>(localtime.minute() / 10);
+			display_content.digits[3] = static_cast<display_digit>(localtime.minute() % 10);
+			display_content.digits[4] = static_cast<display_digit>(localtime.second() / 10);
+			display_content.digits[5] = static_cast<display_digit>(localtime.second() % 10);
 			display_content.colon = true;
 			need_display_refresh = true;
     	}
@@ -121,14 +104,14 @@ int main(void) {
     		display_refresh();
     	}
 
-    	// Done... for now.
+        // Done... for now.
     	__disable_irq();
-    	bool something_pending =
-    			(syncing && dcf77_samples_pending()) ||
-				rtc_second_pending();
-    	if (!something_pending) {
-    		__WFI();
-    	}
-    	__enable_irq();
+        bool something_pending =
+                (syncing && dcf77_samples_pending()) ||
+                rtc.second_pending();
+        if (!something_pending) {
+            __WFI();
+        }
+        __enable_irq();
     }
 }

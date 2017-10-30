@@ -17,19 +17,26 @@ SECTIONS
     {
         KEEP(*(SORT_NONE(.init)))
         KEEP(*(SORT_NONE(.fini)))
-        *(.text .text.*)
+        *(.text*)
     } >FLASH
 
     .rodata : ALIGN(4)
     {
-        *(.rodata .rodata.*)
+        *(.rodata*)
+    } >FLASH
+    
+    .ARM.exidx : ALIGN(4)
+    {
+    	__exidx_start = .;
+    	*(.ARM.exidx*)
+    	__exidx_end = .;
     } >FLASH
 
     .data : ALIGN(4)
     {
         _sdata = .;
         _sidata = LOADADDR(.data);
-        *(.data .data.*)
+        *(.data*)
         . = ALIGN(4);
         _edata = .;
     } >RAM AT>FLASH
@@ -37,7 +44,7 @@ SECTIONS
     .bss : ALIGN(4)
     {
         _sbss = .;
-        *(.bss .bss.* COMMON COMMON.*)
+        *(.bss* COMMON*)
         . = ALIGN(4);
         _ebss = .;
     } >RAM

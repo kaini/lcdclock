@@ -1,89 +1,103 @@
 OUTDIR := build
-C_SOURCES := $(wildcard cmsis/*.c) $(wildcard segger_rtt/*.c) $(wildcard *.c)
-S_SOURCES := $(wildcard cmsis/*.s)
-C_OBJECTS := $(patsubst %.c,$(OUTDIR)/%.o,$(C_SOURCES))
-S_OBJECTS := $(patsubst %.s,$(OUTDIR)/%.o,$(S_SOURCES))
+
+SOURCES := $(wildcard vendor/cmsis/*.c) $(wildcard vendor/cmsis/*.s) $(wildcard vendor/segger_rtt/*.c) $(wildcard *.c) $(wildcard *.cpp)
+OBJECTS := $(patsubst %,$(OUTDIR)/%.o,$(SOURCES))
 FIRMWARE_ELF := $(OUTDIR)/firmware.elf
 FIRMWARE_BIN := $(OUTDIR)/firmware.bin
 
-TEST_C_SOURCES := $(wildcard test/*.c) dcf77_parser.c
-TEST_C_OBJECTS := $(patsubst %.c,$(OUTDIR)/%.test.o,$(TEST_C_SOURCES))
+TEST_SOURCES := $(wildcard test/*.cpp) dcf77_parser.cpp datetime.cpp
+TEST_OBJECTS := $(patsubst %,$(OUTDIR)/%.test.o,$(TEST_SOURCES))
 TEST_EXE := $(OUTDIR)/testrunner.exe
 
 RM := rm -rf
 MKDIR := mkdir -p
 JLINK := jlink
-
-CC := arm-none-eabi-gcc
 OBJCOPY := arm-none-eabi-objcopy
 SIZE := arm-none-eabi-size
-TEST_CC := gcc
+READELF := arm-none-eabi-readelf
+OBJDUMP := arm-none-eabi-objdump
 
-COMMON_CFLAGS := \
-	-I. -Icmsis -Isegger_rtt \
-	-DSTM32L073xx \
-	-std=gnu11 -Wall -Wextra -Wno-unused-parameter \
-	-fno-strict-aliasing -fwrapv -g3
-TARGET_CFLAGS := \
+AS := arm-none-eabi-as
+ASFLAGS := -mcpu=cortex-m0plus -mfloat-abi=soft -mthumb -g
+
+COMMON_C_CXX_FLAGS := \
+	-I$(CURDIR)/vendor/cmsis -I$(CURDIR)/vendor/segger_rtt -I$(CURDIR)/vendor \
+	-DSTM32L073xx=1 \
+	-Wall -Wextra -Wno-unused-parameter \
+	-fno-strict-aliasing -fwrapv -g
+TARGET_C_CXX_FLAGS := \
 	-mcpu=cortex-m0plus -mfloat-abi=soft -mthumb \
 	--specs=nosys.specs \
-	-fdata-sections -ffunction-sections -Wl,--gc-sections \
-	-fshort-enums
-TARGET_DEBUG_CFLAGS := \
-	-Og
-TARGET_RELEASE_CFLAGS := \
-	-DNDEBUG -flto -O3
-TEST_CFLAGS := \
-	-O0
+	-fdata-sections -ffunction-sections -Wl,--gc-sections
+TARGET_DEBUG_C_CXX_FLAGS := -Og
+TARGET_RELEASE_C_CXX_FLAGS := -DNDEBUG=1 -flto -O3
 
-CFLAGS := $(COMMON_CFLAGS) $(TARGET_CFLAGS)
+CC := arm-none-eabi-gcc
+CFLAGS := $(COMMON_C_CXX_FLAGS) $(TARGET_C_CXX_FLAGS) -fexceptions -std=gnu11
 ifdef RELEASE
-	CFLAGS += $(TARGET_RELEASE_CFLAGS)
+	CFLAGS += $(TARGET_RELEASE_C_CXX_FLAGS)
 else
-	CFLAGS += $(TARGET_DEBUG_CFLAGS)
+	CFLAGS += $(TARGET_DEBUG_C_CXX_FLAGS)
 endif
-TEST_CFLAGS := $(COMMON_CFLAGS) $(TEST_CFLAGS)
-TEST_LIBS := -lcmocka
+
+CXX := arm-none-eabi-g++
+CXXFLAGS := $(COMMON_C_CXX_FLAGS) $(TARGET_C_CXX_FLAGS) -std=gnu++14
+ifdef RELEASE
+	CXXFLAGS += $(TARGET_RELEASE_C_CXX_FLAGS)
+else
+	CXXFLAGS += $(TARGET_DEBUG_C_CXX_FLAGS)
+endif
+
+TEST_CXX := g++	
+TEST_CXXFLAGS := $(COMMON_C_CXX_FLAGS) -std=gnu++14 -O0
+TEST_LIBS := -lboost_unit_test_framework-mt
 
 .SUFFIXES:  # disable builtin rules
-.PHONY: clean test flash
 
 all: $(FIRMWARE_ELF) $(FIRMWARE_BIN) test
 
+.PHONY: test
 test: $(TEST_EXE)
 	$<
 
+.PHONY: flash
 flash: $(FIRMWARE_BIN) | flash.jlink
 	$(JLINK) -CommandFile flash.jlink
 
-$(FIRMWARE_ELF): $(S_OBJECTS) $(C_OBJECTS) | linker.ld
+.PHONY: clean
+clean:
+	$(RM) $(OUTDIR)
+
+$(FIRMWARE_ELF): $(OBJECTS) | linker.ld
 	@$(MKDIR) $(@D)
-	$(CC) $(CFLAGS) -T linker.ld -o $@ $^
+	$(CXX) $(CXXFLAGS) -T linker.ld -o $@ $^
+	$(OBJDUMP) -dS $@ > $@.objdump.txt
+	$(READELF) -a $@ > $@.readelf.txt
 	$(SIZE) $@
 
-$(TEST_EXE): $(TEST_C_OBJECTS)
+$(TEST_EXE): $(TEST_OBJECTS)
 	@$(MKDIR) $(@D)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(TEST_LIBS)
+	$(TEST_CXX) $(TEST_CXXFLAGS) -o $@ $^ $(TEST_LIBS)
 
--include $(patsubst %.o,%.d,$(C_OBJECTS))
--include $(patsubst %.o,%.d,$(S_OBJECTS))
--include $(patsubst %.o,%.d,$(TEST_C_OBJECTS))
+-include $(patsubst %.o,%.d,$(OBJECTS))
+-include $(patsubst %.o,%.d,$(TEST_OBJECTS))
 
 %.bin: %.elf
 	@$(MKDIR) $(@D)
 	$(OBJCOPY) -O binary $^ $@
 
-$(C_OBJECTS): $(OUTDIR)/%.o: %.c
+$(OUTDIR)/%.c.o: %.c
 	@$(MKDIR) $(@D)
-	$(CC) $(CFLAGS) -MD -c -o $@ $<
+	$(CC) $(CFLAGS) -MD -MP -c -o $@ $<
 
-$(S_OBJECTS): $(OUTDIR)/%.o: %.s
+$(OUTDIR)/%.s.o: %.s
 	@$(MKDIR) $(@D)
-	$(CC) $(CFLAGS) -MD -c -o $@ $<
-
-$(TEST_C_OBJECTS): $(OUTDIR)/%.test.o: %.c
+	$(AS) $(ASFLAGS) -o $@ $<
+	
+$(OUTDIR)/%.cpp.o: %.cpp
 	@$(MKDIR) $(@D)
-	$(TEST_CC) $(TEST_CFLAGS) -MD -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -MD -MP -c -o $@ $<
 
-clean:
-	$(RM) $(OUTDIR)
+$(OUTDIR)/%.cpp.test.o: %.cpp
+	@$(MKDIR) $(@D)
+	$(TEST_CXX) $(TEST_CXXFLAGS) -MD -MP -c -o $@ $<

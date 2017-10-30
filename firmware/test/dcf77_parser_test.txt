@@ -1,13 +1,9 @@
-#include "dcf77_parser.h"
-#include "dcf77_10ms_pulses.h"
-#include "utils.h"
-#include <assert.h>
-#include <stdarg.h>
-#include <setjmp.h>
-#include <cmocka.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "dcf77_10ms_pulses.hpp"
+#include "../dcf77_parser.hpp"
+
+extern "C" {
+    #include <cmocka.h>
+}
 
 #define TWO(...) __VA_ARGS__, __VA_ARGS__
 #define THREE(...) __VA_ARGS__, __VA_ARGS__, __VA_ARGS__
@@ -23,15 +19,14 @@ static const bool MINUTE_MARK_SAMPLE[100] = { HUNDRED(1) };
 static const bool ZERO_SAMPLE[100] = { TEN(0), NINETY(1) };
 static const bool ONE_SAMPLE[100] = { TWENTY(0), EIGHTY(1) };
 
-static void sync_second(dcf77_parser* parser) {
+static void sync_second(dcf77_parser& parser) {
     for (int i = 0; i < 10; ++i) {
-        dcf77_parser_feed(parser, (i % 2 == 0) ? ZERO_SAMPLE : ONE_SAMPLE);
+        parser.feed((i % 2 == 0) ? ZERO_SAMPLE : ONE_SAMPLE);
     }
 }
 
 static void test_dcf77_parser_second_sync(void** state) {
     dcf77_parser parser;
-    dcf77_parser_init(&parser);
     assert_int_equal(parser.second_start, -1);
 
     for (int i = 0; i < 10; ++i) {

@@ -1,3 +1,5 @@
+#include "dcf77_10ms_pulses.hpp"
+
 const char* const DCF77_10MS_PULSES[] = {
 "                                                                       ..........                   ",
 "                                                                        ....................        ",

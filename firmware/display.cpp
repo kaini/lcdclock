@@ -1,6 +1,7 @@
-#include "display.h"
-#include "stm32l0xx.h"
-#include "utils.h"
+#include "display.hpp"
+#include "utils.hpp"
+#include <initializer_list>
+#include <stm32l0xx.h>
 
 struct display_content display_content = {
 	.digits = { DISPLAY_DIGIT_NONE, DISPLAY_DIGIT_NONE, DISPLAY_DIGIT_NONE, DISPLAY_DIGIT_NONE, DISPLAY_DIGIT_NONE, DISPLAY_DIGIT_NONE },
@@ -8,9 +9,8 @@ struct display_content display_content = {
 	.colon = false,
 };
 
-static void init_pins(GPIO_TypeDef* gpio, const int* pins, int count) {
-	for (int p = 0; p < count; ++p) {
-		int pin = pins[p];
+static void init_pins(GPIO_TypeDef* gpio, std::initializer_list<int> pins) {
+	for (int pin : pins) {
 		// alternative function 1 (LCD)
 		MODIFY_REG(gpio->AFR[GPIO_AFR_Idx(pin)], GPIO_AFR_AFSEL_Msk(pin), (0b0001 << GPIO_AFR_AFSEL_Pos(pin)));
 		// no pullup/pulldown
@@ -25,11 +25,8 @@ static void init_pins(GPIO_TypeDef* gpio, const int* pins, int count) {
 }
 
 void display_init(void) {
-	static const int pins_a[] = { 1, 2, 3, 6, 7, 8, 9, 10 };
-	static const int pins_b[] = { 0, 1, 3, 4, 5, 9, 10, 11 };
-
-	init_pins(GPIOA, pins_a, COUNTOF(pins_a));
-	init_pins(GPIOB, pins_b, COUNTOF(pins_b));
+	init_pins(GPIOA, { 1, 2, 3, 6, 7, 8, 9, 10 });
+	init_pins(GPIOB, { 0, 1, 3, 4, 5, 9, 10, 11 });
 
 	// 1/3 bias, 1/4 duty, external voltage
 	MODIFY_REG(LCD->CR, LCD_CR_BIAS_Msk | LCD_CR_DUTY_Msk, (0b10 << LCD_CR_BIAS_Pos) | (0b011 << LCD_CR_DUTY_Pos) | LCD_CR_VSEL);
@@ -77,15 +74,15 @@ void display_refresh(void) {
 	while (READ_BIT(LCD->SR, LCD_SR_UDR))
 		;
 
-	for (int i = 0; i < COUNTOF(LCD->RAM); ++i) {
+	for (int i = 0; i < sizeof(LCD->RAM) / sizeof(LCD->RAM[0]); ++i) {
 		WRITE_REG(LCD->RAM[i], 0);
 	}
 
-	for (int i = 0; i < COUNTOF(display_content.digits); ++i) {
+	for (int i = 0; i < sizeof(display_content.digits) / sizeof(display_content.digits[0]); ++i) {
 		display_digit(display_content.digits[i], i);
 	}
 
-	for (int i = 0; i < COUNTOF(display_content.dots); ++i) {
+	for (int i = 0; i < sizeof(display_content.dots) / sizeof(display_content.dots[0]); ++i) {
 		if (display_content.dots[i]) {
 			SET_BIT(LCD->RAM[4], 1 << (1 + 2 * i));
 		}

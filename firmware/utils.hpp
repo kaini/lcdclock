@@ -1,12 +1,5 @@
 #pragma once
-#include "stm32l0xx.h"
-#include "SEGGER_RTT.h"
-#include <assert.h>
-
-#define CONCAT_IMPL(A, B) A ## B
-#define CONCAT(A, B) CONCAT_IMPL(A, B)
-
-#define COUNTOF(ARR) ((int)(sizeof(ARR) / sizeof(ARR[0])))
+#include <cassert>
 
 #ifdef NDEBUG
     #define ASSERT(EXPR) do { (void)(EXPR); } while (0)
@@ -17,18 +10,14 @@
 #ifdef NDEBUG
 	#define DEBUG_PRINTF() do { } while (0)
 #else
-	#define DEBUG_PRINTF(...) do { SEGGER_RTT_printf(0, __VA_ARGS__); } while (0)
+    #ifdef TEST
+        #include <cstdio>
+        #define DEBUG_PRINTF(...) do { printf(__VA_ARGS__); } while (0)
+    #else
+        #include "SEGGER_RTT.h"
+        #define DEBUG_PRINTF(...) do { SEGGER_RTT_printf(0, __VA_ARGS__); } while (0)
+    #endif
 #endif
-
-typedef uint32_t critical_section_handle;
-static inline __attribute__((warn_unused_result)) critical_section_handle enter_critical_section() {
-	critical_section_handle handle = __get_PRIMASK();
-	__disable_irq();
-	return handle;
-}
-static inline void leave_critical_section(critical_section_handle handle) {
-	__set_PRIMASK(handle);
-}
 
 #define GPIO_PUPDR_PUPD_Pos(PIN) (2 * (PIN))
 #define GPIO_PUPDR_PUPD_Msk(PIN) (0b11 << GPIO_PUPDR_PUPD_Pos(PIN))
