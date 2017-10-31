@@ -1,5 +1,5 @@
 #pragma once
-#include "stm32l073xx.h"
+#include <stm32l073xx.h>
 
 namespace hw {
 

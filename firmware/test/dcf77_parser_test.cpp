@@ -1,4 +1,5 @@
 #include "../dcf77_parser.hpp"
+#include "output.hpp"
 #include "dcf77_10ms_pulses.hpp"
 #include <boost/test/unit_test.hpp>
 

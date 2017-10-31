@@ -1,7 +1,6 @@
 #include "datetime.hpp"
 #include "utils.hpp"
 #include <tuple>
-#include <iostream>
 
 // :(
 // https://stackoverflow.com/questions/12089514/real-modulo-operator-in-c-c
@@ -128,10 +127,5 @@ bool datetime::operator<(const datetime& a, const datetime& b) {
     return
         std::make_tuple(a.year(), a.month(), a.day(), a.hour(), a.minute(), a.second()) <
         std::make_tuple(b.year(), b.month(), b.day(), b.hour(), b.minute(), b.second());
-}
-
-std::ostream& datetime::operator<<(std::ostream& out, const datetime& dt) {
-    out << dt.year() << '-' << dt.month() << '-' << dt.day() << ' ' << dt.hour() << ':' << dt.minute() << ':' << dt.second();
-    return out;
 }
 

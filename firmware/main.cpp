@@ -3,6 +3,7 @@
 #include "display.hpp"
 #include "rtc.hpp"
 #include "utils.hpp"
+#include "critical_section.hpp"
 #include <stm32l0xx.h>
 
 // https://andriidevel.blogspot.co.at/2016/05/size-cost-of-c-exception-handling-on.html
@@ -13,53 +14,64 @@ namespace __cxxabiv1 {
     std::terminate_handler __terminate_handler = abort;
 }
 
-static void power_clock_init() {
-	// Enable the power interface clock
-	SET_BIT(RCC->APB1ENR, RCC_APB1ENR_PWREN);
+namespace {
 
-	// Go into the lowest power range (Range 3)
-	while (READ_BIT(PWR->CSR, PWR_CSR_VOSF))
-		;
-	MODIFY_REG(PWR->CR, PWR_CR_VOS_Msk, 0b11 << PWR_CR_VOS_Pos);
-	while (READ_BIT(PWR->CSR, PWR_CSR_VOSF))
-		;
+struct power_and_clocks {
+    power_and_clocks() {
+        // Enable the power interface clock
+        SET_BIT(RCC->APB1ENR, RCC_APB1ENR_PWREN);
 
-	// Set the MSE (multiple speed internal) oscillator to 1 MHz
-	MODIFY_REG(RCC->ICSCR, RCC_ICSCR_MSIRANGE_Msk, RCC_ICSCR_MSIRANGE_4);
-	while (!READ_BIT(RCC->CR, RCC_CR_MSIRDY))
-		;
+        // Go into the lowest power range (Range 3)
+        while (READ_BIT(PWR->CSR, PWR_CSR_VOSF))
+            ;
+        MODIFY_REG(PWR->CR, PWR_CR_VOS_Msk, 0b11 << PWR_CR_VOS_Pos);
+        while (READ_BIT(PWR->CSR, PWR_CSR_VOSF))
+            ;
 
-	// Disable the RTC domain write protection
-	SET_BIT(PWR->CR, PWR_CR_DBP);
+        // Set the MSE (multiple speed internal) oscillator to 1 MHz
+        MODIFY_REG(RCC->ICSCR, RCC_ICSCR_MSIRANGE_Msk, RCC_ICSCR_MSIRANGE_4);
+        while (!READ_BIT(RCC->CR, RCC_CR_MSIRDY))
+            ;
 
-	// Enable the 2^15 Hz LSE (low speed external) crystal and drive it in high drive mode
-	MODIFY_REG(RCC->CSR, RCC_CSR_LSEDRV_Msk, (0b11 << RCC_CSR_LSEDRV_Pos) | RCC_CSR_LSEON);
-	while (!READ_BIT(RCC->CSR, RCC_CSR_LSERDY))
-		;
+        // Disable the RTC domain write protection
+        SET_BIT(PWR->CR, PWR_CR_DBP);
 
-	// Set the RTC/LCD clock to the LSE and enable the RTC
-	MODIFY_REG(RCC->CSR, RCC_CSR_RTCSEL_Msk, (0b01 << RCC_CSR_RTCSEL_Pos) | RCC_CSR_RTCEN);
+        // Enable the 2^15 Hz LSE (low speed external) crystal and drive it in high drive mode
+        MODIFY_REG(RCC->CSR, RCC_CSR_LSEDRV_Msk, (0b11 << RCC_CSR_LSEDRV_Pos) | RCC_CSR_LSEON);
+        while (!READ_BIT(RCC->CSR, RCC_CSR_LSERDY))
+            ;
 
-	// Enable LCD clock
-	SET_BIT(RCC->APB1ENR, RCC_APB1ENR_LCDEN);
-	SET_BIT(RCC->APB1SMENR, RCC_APB1SMENR_LCDSMEN);
+        // Set the RTC/LCD clock to the LSE and enable the RTC
+        MODIFY_REG(RCC->CSR, RCC_CSR_RTCSEL_Msk, (0b01 << RCC_CSR_RTCSEL_Pos) | RCC_CSR_RTCEN);
 
-	// Enable GPIO clocks
-	SET_BIT(RCC->IOPENR, RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN);
-	SET_BIT(RCC->IOPSMENR, RCC_IOPSMENR_GPIOASMEN | RCC_IOPSMENR_GPIOBSMEN);
+        // Enable LCD clock
+        SET_BIT(RCC->APB1ENR, RCC_APB1ENR_LCDEN);
+        SET_BIT(RCC->APB1SMENR, RCC_APB1SMENR_LCDSMEN);
 
-	// Enable TIM2 clock
-	SET_BIT(RCC->APB1ENR, RCC_APB1ENR_TIM2EN);
-	SET_BIT(RCC->APB1SMENR, RCC_APB1SMENR_TIM2SMEN);
+        // Enable GPIO clocks
+        SET_BIT(RCC->IOPENR, RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN);
+        SET_BIT(RCC->IOPSMENR, RCC_IOPSMENR_GPIOASMEN | RCC_IOPSMENR_GPIOBSMEN);
+
+        // Enable TIM2 clock
+        SET_BIT(RCC->APB1ENR, RCC_APB1ENR_TIM2EN);
+        SET_BIT(RCC->APB1SMENR, RCC_APB1SMENR_TIM2SMEN);
+    }
+};
+
 }
 
+static power_and_clocks power_and_clocks;
+static hw::rtc rtc(RTC);
+
 int main() {
-    __disable_irq();
-    power_clock_init();
     dcf77_init();
     display_init();
-    rtc rtc;
-    __enable_irq();
+
+    NVIC_EnableIRQ(RTC_IRQn);
+    NVIC_SetPriority(RTC_IRQn, 200);
+    SET_BIT(EXTI->IMR, EXTI_IMR_IM17);
+    SET_BIT(EXTI->EMR, EXTI_EMR_EM17);
+    SET_BIT(EXTI->RTSR, EXTI_RTSR_RT17);
 
     bool need_sync = true;
     bool syncing = false;
@@ -123,5 +135,21 @@ int main() {
             __WFI();
         }
         __enable_irq();
+    }
+}
+
+extern "C" void RTC_IRQHandler() {
+    if (READ_BIT(RTC->ISR, RTC_ISR_ALRAF)) {
+        {
+            // Unfortunately the ISR register contains one read-write bit, that could be
+            // changed. Therefore all non-atomic writes to this register have to be in a
+            // critical section.
+            hw::critical_section cs;
+            CLEAR_BIT(RTC->ISR, RTC_ISR_ALRAF);
+        }
+        if (READ_BIT(EXTI->PR, EXTI_PR_PIF17)) {
+            WRITE_REG(EXTI->PR, EXTI_PR_PIF17);
+            rtc.irq_alarm_a();
+        }
     }
 }

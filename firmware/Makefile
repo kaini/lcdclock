@@ -62,16 +62,16 @@ test: $(TEST_EXE)
 	$(CURDIR)/$<
 
 .PHONY: flash
-flash: $(FIRMWARE_BIN) | flash.jlink
+flash: $(FIRMWARE_BIN)
 	$(JLINK) -CommandFile flash.jlink
 
 .PHONY: clean
 clean:
 	$(RM) $(OUTDIR)
 
-$(FIRMWARE_ELF): $(OBJECTS) | linker.ld
+$(FIRMWARE_ELF): $(OBJECTS)
 	@$(MKDIR) $(@D)
-	$(CXX) $(CXXFLAGS) -T linker.ld -o $@ $^
+	$(CXX) $(CXXFLAGS) -T linker.ld -Wl,-Map=$@.map -o $@ $^
 	$(OBJDUMP) -dS $@ > $@.objdump.txt
 	$(READELF) -a $@ > $@.readelf.txt
 	$(SIZE) $@

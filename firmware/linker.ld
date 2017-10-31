@@ -13,6 +13,18 @@ SECTIONS
         KEEP(*(.isr_vector))
     } >FLASH
 
+    .init_array : ALIGN(4)
+    {
+        __preinit_array_start = .;
+        KEEP(*(.preinit_array))
+        __preinit_array_end = .;
+        
+        . = ALIGN(4);
+        __init_array_start = .;
+        KEEP(*(.init_array))
+        __init_array_end = .;
+    } >FLASH
+
     .text : ALIGN(4)
     {
         KEEP(*(SORT_NONE(.init)))
@@ -23,6 +35,11 @@ SECTIONS
     .rodata : ALIGN(4)
     {
         *(.rodata*)
+    } >FLASH
+    
+    .ARM.extab : ALIGN(4)
+    {
+    	*(.ARM.extab*)
     } >FLASH
     
     .ARM.exidx : ALIGN(4)

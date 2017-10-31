@@ -74,7 +74,7 @@ static bool is_parity_valid(const Container& bits, dcf77::bit parity) {
 }
 
 template <typename Container>
-int parse_valid_number(const Container& bits) {
+static int parse_valid_number(const Container& bits) {
     int result = 0;
     for (size_t i = 0; i < bits.size(); ++i) {
         result += (1 << i) * (bits[i] == dcf77::bit::one);
