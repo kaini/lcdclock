@@ -74,9 +74,9 @@ BOOST_AUTO_TEST_CASE(frame_sync_test) {
 BOOST_AUTO_TEST_CASE(parser_testdata_test) {
     dcf77::parser parser;
 
-    datetime frame6;
-    datetime frame7;
-    datetime frame220;
+    datetime::datetime frame6;
+    datetime::datetime frame7;
+    datetime::datetime frame220;
     int valid_frames = 0;
     int frame_number = 0;
     for (size_t y = 0; y < DCF77_10MS_PULSES_HEIGHT; ++y) {
@@ -105,9 +105,9 @@ BOOST_AUTO_TEST_CASE(parser_testdata_test) {
     }
 
     BOOST_CHECK_EQUAL(valid_frames, 58);
-    BOOST_CHECK_EQUAL(frame6, datetime(2008, 7, 10, 19, 43, 0));
-    BOOST_CHECK_EQUAL(frame7, datetime(2008, 7, 10, 19, 44, 0));
-    BOOST_CHECK_EQUAL(frame220, datetime(2008, 7, 10, 23, 17, 0));
+    BOOST_CHECK_EQUAL(frame6, datetime::datetime(2008, 7, 10, 19, 43, 0));
+    BOOST_CHECK_EQUAL(frame7, datetime::datetime(2008, 7, 10, 19, 44, 0));
+    BOOST_CHECK_EQUAL(frame220, datetime::datetime(2008, 7, 10, 23, 17, 0));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

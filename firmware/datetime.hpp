@@ -2,6 +2,8 @@
 #include <iosfwd>
 #include <stdexcept>
 
+namespace datetime {
+
 bool is_leap_year(int year);
 
 int month_days(int month, int year);
@@ -46,3 +48,6 @@ inline bool operator>=(const datetime& a, const datetime& b) { return !(a < b); 
 inline bool operator>(const datetime& a, const datetime& b) { return !(a <= b); }
 
 std::ostream& operator<<(std::ostream& out, const datetime& dt);
+
+}
+

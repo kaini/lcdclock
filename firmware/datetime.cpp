@@ -16,11 +16,11 @@ static int floor_div(int a, int b) {
     return a / b - (a < 0 && a % b != 0);
 }
 
-bool is_leap_year(int year) {
+bool datetime::is_leap_year(int year) {
     return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
 }
 
-int month_days(int month, int year) {
+int datetime::month_days(int month, int year) {
     switch (month) {
     case 1:
     case 3:
@@ -43,14 +43,14 @@ int month_days(int month, int year) {
     }
 }
 
-datetime::datetime(int year, int month, int day, int hour, int minute, int second) :
+datetime::datetime::datetime(int year, int month, int day, int hour, int minute, int second) :
     m_year(year), m_month(month), m_day(day), m_hour(hour), m_minute(minute), m_second(second) {
     if (!is_valid()) {
         throw invalid_datetime_exception();
     }
 }
 
-void datetime::add_days(int days) {
+void datetime::datetime::add_days(int days) {
     m_day += days;
 
     while (m_day > month_days(m_month, m_year)) {
@@ -74,7 +74,7 @@ void datetime::add_days(int days) {
     ASSERT(is_valid());
 }
 
-void datetime::add_hours(int hours) {
+void datetime::datetime::add_hours(int hours) {
     m_hour += hours;
     int days = floor_div(m_hour, 24);
     m_hour = mod(m_hour, 24);
@@ -84,7 +84,7 @@ void datetime::add_hours(int hours) {
     ASSERT(is_valid());
 }
 
-void datetime::add_minutes(int minutes) {
+void datetime::datetime::add_minutes(int minutes) {
     m_minute += minutes;
     int hours = floor_div(m_minute, 60);
     m_minute = mod(m_minute, 60);
@@ -94,7 +94,7 @@ void datetime::add_minutes(int minutes) {
     ASSERT(is_valid());
 }
 
-void datetime::add_seconds(int seconds) {
+void datetime::datetime::add_seconds(int seconds) {
     m_second += seconds;
     int minutes = floor_div(m_second, 60);
     m_second = mod(m_second, 60);
@@ -104,7 +104,7 @@ void datetime::add_seconds(int seconds) {
     ASSERT(is_valid());
 }
 
-bool datetime::is_valid() const {
+bool datetime::datetime::is_valid() const {
     return
         m_year >= 0 &&
         1 <= m_month && m_month <= 12 &&
@@ -114,7 +114,7 @@ bool datetime::is_valid() const {
         0 <= m_second && m_second <= 59;
 }
 
-bool operator==(const datetime& a, const datetime& b) {
+bool datetime::operator==(const datetime& a, const datetime& b) {
     return
         a.year() == b.year() &&
         a.month() == b.month() &&
@@ -124,13 +124,13 @@ bool operator==(const datetime& a, const datetime& b) {
         a.second() == b.second();
 }
 
-bool operator<(const datetime& a, const datetime& b) {
+bool datetime::operator<(const datetime& a, const datetime& b) {
     return
         std::make_tuple(a.year(), a.month(), a.day(), a.hour(), a.minute(), a.second()) <
         std::make_tuple(b.year(), b.month(), b.day(), b.hour(), b.minute(), b.second());
 }
 
-std::ostream& operator<<(std::ostream& out, const datetime& dt) {
+std::ostream& datetime::operator<<(std::ostream& out, const datetime& dt) {
     out << dt.year() << '-' << dt.month() << '-' << dt.day() << ' ' << dt.hour() << ':' << dt.minute() << ':' << dt.second();
     return out;
 }

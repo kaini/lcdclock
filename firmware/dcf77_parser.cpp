@@ -273,7 +273,7 @@ void dcf77::parser::consume_dataframe() {
     m_result.bits.back() = bit::minute_mark;
 }
 
-std::experimental::optional<datetime> dcf77::parser::get_result() const {
+std::experimental::optional<datetime::datetime> dcf77::parser::get_result() const {
 	bool layout_valid =
 	    m_result.zero == bit::zero &&
 	    m_result.one == bit::one &&
@@ -306,14 +306,14 @@ std::experimental::optional<datetime> dcf77::parser::get_result() const {
     bool isdst = m_result.in_dst == bit::one;
 
     try {
-        datetime result(year, month, day, hour, minute, 0);
+        datetime::datetime result(year, month, day, hour, minute, 0);
         if (isdst) {
             result.add_hours(-2);
         } else {
             result.add_hours(-1);
         }
         return result;
-    } catch (const invalid_datetime_exception&) {
+    } catch (const datetime::invalid_datetime_exception&) {
         return {};
     }
 }

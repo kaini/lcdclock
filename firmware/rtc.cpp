@@ -52,7 +52,7 @@ void rtc::clear_second_pending() {
 	::second_pending = false;
 }
 
-datetime rtc::get_time() const {
+datetime::datetime rtc::get_time() const {
 	uint32_t time_register = 0;
 	uint32_t time_register_read = 0;
 	uint32_t date_register = 0;
@@ -71,10 +71,10 @@ datetime rtc::get_time() const {
 	int minute = ((time_register & RTC_TR_MNT_Msk) >> RTC_TR_MNT_Pos) * 10 + ((time_register & RTC_TR_MNU_Msk) >> RTC_TR_MNU_Pos);
 	int second = ((time_register & RTC_TR_ST_Msk) >> RTC_TR_ST_Pos) * 10 + ((time_register & RTC_TR_SU_Msk) >> RTC_TR_SU_Pos);
 
-    return datetime(year, month, day, hour, minute, second);
+    return datetime::datetime(year, month, day, hour, minute, second);
 }
 
-void rtc::set_time(const datetime& tm) {
+void rtc::set_time(const datetime::datetime& tm) {
 	// Unlock the RTC registers
 	WRITE_REG(RTC->WPR, 0xCA);
 	WRITE_REG(RTC->WPR, 0x53);

@@ -95,7 +95,7 @@ int main() {
     	if (rtc.second_pending()) {
     		rtc.clear_second_pending();
 
-    		datetime localtime = now;
+    		auto localtime = now;
 			if (localtime.hour() < 10) {
 				display_content.digits[0] = DISPLAY_DIGIT_NONE;
 			} else {

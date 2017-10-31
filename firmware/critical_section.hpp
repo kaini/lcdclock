@@ -1,6 +1,8 @@
 #pragma once
 #include "stm32l073xx.h"
 
+namespace hw {
+
 class critical_section {
 public:
     /** Begins a critical section. */
@@ -16,3 +18,5 @@ public:
 private:
     uint32_t m_primask;
 };
+
+}

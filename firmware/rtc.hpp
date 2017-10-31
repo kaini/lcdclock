@@ -15,6 +15,6 @@ public:
     bool second_pending() const;
     void clear_second_pending();
 
-    datetime get_time() const;
-    void set_time(const datetime& time);
+    datetime::datetime get_time() const;
+    void set_time(const datetime::datetime& time);
 };

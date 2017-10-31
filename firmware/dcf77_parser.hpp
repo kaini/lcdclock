@@ -46,7 +46,7 @@ public:
 
     /** Feeds one second of samples into the parser. Returns true once a new frame is ready. */
     bool feed(const bool* samples);
-    std::experimental::optional<datetime> get_result() const;
+    std::experimental::optional<datetime::datetime> get_result() const;
 
 private:
     void consume_dataframe();
