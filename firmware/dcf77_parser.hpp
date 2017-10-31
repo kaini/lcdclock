@@ -5,45 +5,55 @@
 #include <cstdint>
 #include <experimental/optional>
 
-class dcf77_parser {
+namespace dcf77 {
+
+constexpr size_t samples_per_second = 100;
+constexpr size_t bits_per_minute = 60;
+
+enum class bit : int8_t {
+    unknown, zero, one, minute_mark,
+};
+
+/** A class to synchronize the start of a DCF77 bit. Returns an index from 0 to samples_per_second or -1. */
+class bit_sync {
 public:
-    static constexpr int samples_per_second = 100;
-    static constexpr int bits_per_minute = 60;
-
-    dcf77_parser();
-
-    /** Feeds one second of samples into the parser. Returns true once a new frame is ready. */
-    std::experimental::optional<datetime> feed(const bool* samples);
+    bit_sync();
+    void feed(const bool samples[samples_per_second]);
+    size_t bit_start() const { return m_bit_start; }
 
 private:
-    enum class bit : int8_t {
-        unknown, zero, one, minute_mark,
-    };
+    std::array<int8_t, samples_per_second> m_histogram;
+    int m_count = 0;
+    size_t m_bit_start = size_t(-1);
+};
 
-    template <typename Container>
-    static bit ripple_add(Container& bits, bit carray);
+/** A class to synchronize the start of a DCF77 frame. Returns an index from 0 to bits_per_minute or -1. */
+class frame_sync {
+public:
+    frame_sync();
+    void feed(bit bit);
+    size_t frame_start() const { return m_frame_start; }
 
-    template <typename Container>
-    static bool is_parity_valid(const Container& bits, bit parity);
+private:
+    std::array<int8_t, bits_per_minute> m_histogram;
+    size_t m_at = 0;
+    size_t m_frame_start = size_t(-1);
+};
 
-    template <typename Container>
-    static int parse_valid_number(const Container& bits);
+class parser {
+public:
+    parser();
 
-    void feed_second_sync(const bool* samples);
-    bit parse_bit(const bool* samples) const;
-    void feed_minute_mark();
-    void parse_dataframe();
+    /** Feeds one second of samples into the parser. Returns true once a new frame is ready. */
+    bool feed(const bool* samples);
     std::experimental::optional<datetime> get_result() const;
 
-    std::array<int8_t, samples_per_second> m_second_sync_samples;
-    int m_second_sync_count = 0;
-    int m_second_start = -1;
+private:
+    void consume_dataframe();
 
-    int m_bit_at = 0;
-
-    std::array<int8_t, bits_per_minute> m_minute_marks;
-    int m_minute_mark = -1;
-
+    bit_sync m_bit_sync;
+    frame_sync m_frame_sync;
+    size_t m_at = 0;
     std::array<bit, bits_per_minute> m_new_bits;
     union {
         std::array<bit, bits_per_minute> bits;
@@ -86,6 +96,7 @@ private:
             bit minute_mark;
         };
     } m_result;
-    int m_frame_number = 0;
 };
+
+}
 

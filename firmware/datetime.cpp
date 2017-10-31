@@ -1,5 +1,7 @@
 #include "datetime.hpp"
 #include "utils.hpp"
+#include <tuple>
+#include <iostream>
 
 // :(
 // https://stackoverflow.com/questions/12089514/real-modulo-operator-in-c-c
@@ -43,35 +45,33 @@ int month_days(int month, int year) {
 
 datetime::datetime(int year, int month, int day, int hour, int minute, int second) :
     m_year(year), m_month(month), m_day(day), m_hour(hour), m_minute(minute), m_second(second) {
-    assert_valid();
-}
-
-void datetime::add_years(int years) {
-    m_year += years;
-    assert_valid();
-}
-
-void datetime::add_months(int months) {
-    m_month += months;
-    int years = floor_div(m_month - 1, 12);
-    m_month = mod(m_month - 1, 12) + 1;
-    if (years != 0) {
-        add_years(years);
+    if (!is_valid()) {
+        throw invalid_datetime_exception();
     }
-    assert_valid();
 }
 
 void datetime::add_days(int days) {
     m_day += days;
+
     while (m_day > month_days(m_month, m_year)) {
         m_day -= month_days(m_month, m_year);
-        add_months(1);
+        m_month += 1;
+        if (m_month > 12) {
+            m_month = 1;
+            m_year += 1;
+        }
     }
+
     while (m_day < 1) {
-        add_months(-1);
+        m_month -= 1;
+        if (m_month < 1) {
+            m_month = 12;
+            m_year -= 1;
+        }
         m_day += month_days(m_month, m_year);
     }
-    assert_valid();
+
+    ASSERT(is_valid());
 }
 
 void datetime::add_hours(int hours) {
@@ -81,7 +81,7 @@ void datetime::add_hours(int hours) {
     if (days != 0) {
         add_days(days);
     }
-    assert_valid();
+    ASSERT(is_valid());
 }
 
 void datetime::add_minutes(int minutes) {
@@ -91,7 +91,7 @@ void datetime::add_minutes(int minutes) {
     if (hours != 0) {
         add_hours(hours);
     }
-    assert_valid();
+    ASSERT(is_valid());
 }
 
 void datetime::add_seconds(int seconds) {
@@ -101,14 +101,37 @@ void datetime::add_seconds(int seconds) {
     if (minutes != 0) {
         add_minutes(minutes);
     }
-    assert_valid();
+    ASSERT(is_valid());
 }
 
-void datetime::assert_valid() {
-    ASSERT(m_year >= 0);
-    ASSERT(1 <= m_month && m_month <= 12);
-    ASSERT(1 <= m_day && m_day <= month_days(m_month, m_year));
-    ASSERT(0 <= m_hour && m_hour <= 23);
-    ASSERT(0 <= m_minute && m_minute <= 59);
-    ASSERT(0 <= m_second && m_second <= 59);
+bool datetime::is_valid() const {
+    return
+        m_year >= 0 &&
+        1 <= m_month && m_month <= 12 &&
+        1 <= m_day && m_day <= month_days(m_month, m_year) &&
+        0 <= m_hour && m_hour <= 23 &&
+        0 <= m_minute && m_minute <= 59 &&
+        0 <= m_second && m_second <= 59;
 }
+
+bool operator==(const datetime& a, const datetime& b) {
+    return
+        a.year() == b.year() &&
+        a.month() == b.month() &&
+        a.day() == b.day() &&
+        a.hour() == b.hour() &&
+        a.minute() == b.minute() &&
+        a.second() == b.second();
+}
+
+bool operator<(const datetime& a, const datetime& b) {
+    return
+        std::make_tuple(a.year(), a.month(), a.day(), a.hour(), a.minute(), a.second()) <
+        std::make_tuple(b.year(), b.month(), b.day(), b.hour(), b.minute(), b.second());
+}
+
+std::ostream& operator<<(std::ostream& out, const datetime& dt) {
+    out << dt.year() << '-' << dt.month() << '-' << dt.day() << ' ' << dt.hour() << ':' << dt.minute() << ':' << dt.second();
+    return out;
+}
+

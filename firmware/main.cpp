@@ -5,7 +5,15 @@
 #include "utils.hpp"
 #include <stm32l0xx.h>
 
-void power_clock_init() {
+// https://andriidevel.blogspot.co.at/2016/05/size-cost-of-c-exception-handling-on.html
+// This removes the default terminate handler which unfortunately pulls a lot of pretty printing
+// functions that amount to about 60 kB of code. Also we cannot output stuff, therefore who
+// cares.
+namespace __cxxabiv1 {
+    std::terminate_handler __terminate_handler = abort;
+}
+
+static void power_clock_init() {
 	// Enable the power interface clock
 	SET_BIT(RCC->APB1ENR, RCC_APB1ENR_PWREN);
 
@@ -55,7 +63,7 @@ int main() {
 
     bool need_sync = true;
     bool syncing = false;
-    dcf77_parser parser;
+    dcf77::parser parser;
 
     while (true) {
         auto now = rtc.get_time();
@@ -63,22 +71,24 @@ int main() {
 
     	if (need_sync && !syncing) {
 			syncing = true;
-			parser = dcf77_parser();
+			parser = dcf77::parser();
 			dcf77_enable();
 	    	display_content.dots[1] = true;
 	    	need_display_refresh = true;
     	}
 
     	if (syncing && dcf77_samples_pending()) {
-    		bool samples[dcf77_parser::samples_per_second];
+    		bool samples[dcf77::samples_per_second];
     		dcf77_clear_samples_pending(samples);
-			if (auto frame = parser.feed(samples)) {
-			    rtc.set_time(*frame);
-                need_sync = false;
-                syncing = false;
-                dcf77_disable();
-                display_content.dots[1] = false;
-                need_display_refresh = true;
+			if (parser.feed(samples)) {
+			    if (auto frame = parser.get_result()) {
+                    rtc.set_time(*frame);
+                    need_sync = false;
+                    syncing = false;
+                    dcf77_disable();
+                    display_content.dots[1] = false;
+                    need_display_refresh = true;
+			    }
 			}
     	}
 

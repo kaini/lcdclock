@@ -22,7 +22,7 @@ ASFLAGS := -mcpu=cortex-m0plus -mfloat-abi=soft -mthumb -g
 
 COMMON_C_CXX_FLAGS := \
 	-I$(CURDIR)/vendor/cmsis -I$(CURDIR)/vendor/segger_rtt -I$(CURDIR)/vendor \
-	-DSTM32L073xx=1 \
+	-DSTM32L073xx \
 	-Wall -Wextra -Wno-unused-parameter \
 	-fno-strict-aliasing -fwrapv -g
 TARGET_C_CXX_FLAGS := \
@@ -30,10 +30,10 @@ TARGET_C_CXX_FLAGS := \
 	--specs=nosys.specs \
 	-fdata-sections -ffunction-sections -Wl,--gc-sections
 TARGET_DEBUG_C_CXX_FLAGS := -Og
-TARGET_RELEASE_C_CXX_FLAGS := -DNDEBUG=1 -flto -O3
+TARGET_RELEASE_C_CXX_FLAGS := -DNDEBUG -flto -O3
 
 CC := arm-none-eabi-gcc
-CFLAGS := $(COMMON_C_CXX_FLAGS) $(TARGET_C_CXX_FLAGS) -fexceptions -std=gnu11
+CFLAGS := $(COMMON_C_CXX_FLAGS) $(TARGET_C_CXX_FLAGS) -std=c11
 ifdef RELEASE
 	CFLAGS += $(TARGET_RELEASE_C_CXX_FLAGS)
 else
@@ -41,24 +41,25 @@ else
 endif
 
 CXX := arm-none-eabi-g++
-CXXFLAGS := $(COMMON_C_CXX_FLAGS) $(TARGET_C_CXX_FLAGS) -std=gnu++14
+CXXFLAGS := $(COMMON_C_CXX_FLAGS) $(TARGET_C_CXX_FLAGS) -std=c++14
 ifdef RELEASE
 	CXXFLAGS += $(TARGET_RELEASE_C_CXX_FLAGS)
 else
 	CXXFLAGS += $(TARGET_DEBUG_C_CXX_FLAGS)
 endif
 
-TEST_CXX := g++	
+TEST_CXX := g++
 TEST_CXXFLAGS := $(COMMON_C_CXX_FLAGS) -std=gnu++14 -O0
 TEST_LIBS := -lboost_unit_test_framework-mt
 
 .SUFFIXES:  # disable builtin rules
 
+.PHONY: all
 all: $(FIRMWARE_ELF) $(FIRMWARE_BIN) test
 
 .PHONY: test
 test: $(TEST_EXE)
-	$<
+	$(CURDIR)/$<
 
 .PHONY: flash
 flash: $(FIRMWARE_BIN) | flash.jlink
