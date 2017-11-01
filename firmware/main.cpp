@@ -62,10 +62,10 @@ struct power_and_clocks {
 
 static power_and_clocks power_and_clocks;
 static hw::rtc rtc(RTC);
+static hw::display display(LCD, {{GPIOA, {1, 2, 3, 6, 7, 8, 9, 10}}, {GPIOB, {0, 1, 3, 4, 5, 9, 10, 11}}});
 
 int main() {
     dcf77_init();
-    display_init();
 
     NVIC_EnableIRQ(RTC_IRQn);
     NVIC_SetPriority(RTC_IRQn, 200);
@@ -75,18 +75,17 @@ int main() {
 
     bool need_sync = true;
     bool syncing = false;
+    bool first_iteration = true;
     dcf77::parser parser;
 
     while (true) {
         auto now = rtc.get_time();
-    	bool need_display_refresh = false;
 
     	if (need_sync && !syncing) {
 			syncing = true;
 			parser = dcf77::parser();
 			dcf77_enable();
-	    	display_content.dots[1] = true;
-	    	need_display_refresh = true;
+			display.set_dot(1, true);
     	}
 
     	if (syncing && dcf77_samples_pending()) {
@@ -98,33 +97,30 @@ int main() {
                     need_sync = false;
                     syncing = false;
                     dcf77_disable();
-                    display_content.dots[1] = false;
-                    need_display_refresh = true;
+                    display.set_dot(1, false);
 			    }
 			}
     	}
 
-    	if (rtc.second_pending()) {
+    	if (first_iteration || rtc.second_pending()) {
     		rtc.clear_second_pending();
 
     		auto localtime = now;
 			if (localtime.hour() < 10) {
-				display_content.digits[0] = DISPLAY_DIGIT_NONE;
+				display.set_digit(0, hw::display_digit::none);
 			} else {
-				display_content.digits[0] = static_cast<display_digit>(localtime.hour() / 10);
+			    display.set_digit(0, static_cast<hw::display_digit>(localtime.hour() / 10));
 			}
-			display_content.digits[1] = static_cast<display_digit>(localtime.hour() % 10);
-			display_content.digits[2] = static_cast<display_digit>(localtime.minute() / 10);
-			display_content.digits[3] = static_cast<display_digit>(localtime.minute() % 10);
-			display_content.digits[4] = static_cast<display_digit>(localtime.second() / 10);
-			display_content.digits[5] = static_cast<display_digit>(localtime.second() % 10);
-			display_content.colon = true;
-			need_display_refresh = true;
+			display.set_digit(1, static_cast<hw::display_digit>(localtime.hour() % 10));
+			display.set_digit(2, static_cast<hw::display_digit>(localtime.minute() / 10));
+			display.set_digit(3, static_cast<hw::display_digit>(localtime.minute() % 10));
+			display.set_digit(4, static_cast<hw::display_digit>(localtime.second() / 10));
+			display.set_digit(5, static_cast<hw::display_digit>(localtime.second() % 10));
+			display.set_colon(true);
     	}
 
-    	if (need_display_refresh) {
-    		display_refresh();
-    	}
+    	display.refresh();
+    	first_iteration = false;
 
         // Done... for now.
     	__disable_irq();
@@ -136,6 +132,8 @@ int main() {
         }
         __enable_irq();
     }
+
+    return 0;
 }
 
 extern "C" void RTC_IRQHandler() {

@@ -1,31 +1,53 @@
 #pragma once
+#include <cstdint>
+#include <array>
+#include <initializer_list>
+#include <tuple>
+#include <stm32l073xx.h>
 
-enum display_digit {
-	DISPLAY_DIGIT_0 = 0,
-	DISPLAY_DIGIT_1 = 1,
-	DISPLAY_DIGIT_2 = 2,
-	DISPLAY_DIGIT_3 = 3,
-	DISPLAY_DIGIT_4 = 4,
-	DISPLAY_DIGIT_5 = 5,
-	DISPLAY_DIGIT_6 = 6,
-	DISPLAY_DIGIT_7 = 7,
-	DISPLAY_DIGIT_8 = 8,
-	DISPLAY_DIGIT_9 = 9,
-	DISPLAY_DIGIT_MINUS = 10,
-	DISPLAY_DIGIT_NONE = 11,
+namespace hw {
+
+enum class display_digit : int8_t {
+    zero = 0,
+    one = 1,
+    two = 2,
+    three = 3,
+    four = 4,
+    five = 5,
+    six = 6,
+    seven = 7,
+    eight = 8,
+    nine = 9,
+    minus = 10,
+    none = 11,
 };
 
-struct display_content {
-	display_digit digits[6];
-	bool dots[4];
-	bool colon;
+class display {
+public:
+    using pins = std::initializer_list<std::tuple<GPIO_TypeDef*, std::initializer_list<size_t>>>;
+
+    display(LCD_TypeDef* lcd, pins pins);
+
+    display(const display&) = delete;
+    display(display&&) = delete;
+    display& operator=(const display&) = delete;
+    display& operator=(display&&) = delete;
+
+    void set_digit(size_t i, display_digit value) { m_digits[i] = value; m_need_refresh = true; }
+    void set_dot(size_t i, bool visible) { m_dots[i] = visible; m_need_refresh = true; }
+    void set_colon(bool visible) { m_colon = visible; m_need_refresh = true; }
+
+    void refresh(bool force = false);
+
+private:
+    void render_digit(display_digit digit, size_t pos);
+
+    LCD_TypeDef* m_lcd;
+    bool m_need_refresh = false;
+    std::array<display_digit, 6> m_digits;
+    std::array<bool, 4> m_dots;
+    bool m_colon = false;
 };
 
-// The current state of the display.
-extern struct display_content display_content;
+}
 
-// Initializes the hardware. Must not be interrupted.
-void display_init(void);
-
-// Queue an update of the display content.
-void display_refresh(void);
