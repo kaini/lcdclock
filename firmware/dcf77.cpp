@@ -3,101 +3,89 @@
 #include "dcf77_parser.hpp"
 #include <stm32l0xx.h>
 
-#define VCC_GPIO GPIOB
-#define VCC_PIN 6
+hw::dcf77::dcf77(GPIO_TypeDef* vcc_gpio, size_t vcc_pin, GPIO_TypeDef* sig_gpio, size_t sig_pin, TIM_TypeDef* timer) :
+        m_vcc_gpio(vcc_gpio), m_vcc_pin(vcc_pin), m_sig_gpio(sig_gpio), m_sig_pin(sig_pin), m_timer(timer) {
 
-#define SIGNAL_GPIO GPIOB
-#define SIGNAL_PIN 7
+    // VCC Pin: no pullup/pulldown, low speed, push/pull, output mode
+    MODIFY_REG(m_vcc_gpio->PUPDR, GPIO_PUPDR_PUPD_Msk(m_vcc_pin), 0b00 << GPIO_PUPDR_PUPD_Pos(m_vcc_pin));
+    MODIFY_REG(m_vcc_gpio->OSPEEDR, GPIO_OSPEEDER_OSPEED_Msk(m_vcc_pin), 0b00 << GPIO_OSPEEDER_OSPEED_Pos(m_vcc_pin));
+    CLEAR_BIT(m_vcc_gpio->OTYPER, GPIO_OTYPER_OT(m_vcc_pin));
+    MODIFY_REG(m_vcc_gpio->MODER, GPIO_MODER_MODE_Msk(m_vcc_pin), 0b01 << GPIO_MODER_MODE_Pos(m_vcc_pin));
 
-static volatile bool samples_a[dcf77::samples_per_second] = {};
-static volatile bool samples_b[dcf77::samples_per_second] = {};
-static volatile const bool* volatile samples_read = NULL;
-static volatile bool* volatile samples_write = NULL;
-static volatile int write_at = 0;
+    // Use the 2^15 Hz clock from the LSE as clock source.
+    // To get an exact 10 ms clock, I use a nice idea from https://www.mikrocontroller.net/topic/23135#172414
+    // Solve for x and y:
+    //   x * floor(2^15 / 100) + y * ceil(2^15 / 100) = 2^15
+    //   x + y = 100
+    // See https://www.wolframalpha.com/input/?i=solve+x+*+floor(2%5E15+%2F+100)+%2B+y+*+ceil(2%5E15+%2F+100)+%3D+2%5E15;+x+%2B+y+%3D+100+for+x,+y
+    //   x = 32 (count 32 times to 327) and y = 68 (count 68 times to 328)
+    SET_BIT(m_timer->SMCR, TIM_SMCR_ECE);
+    MODIFY_REG(m_timer->OR, TIM2_OR_ETR_RMP_Msk, 0b101 << TIM2_OR_ETR_RMP_Pos);  // Connect to LSE
+    SET_BIT(m_timer->DIER, TIM_DIER_UIE);
 
-void dcf77_init(void) {
-	// VCC Pin: no pullup/pulldown, low speed, push/pull, output mode
-	MODIFY_REG(VCC_GPIO->PUPDR, GPIO_PUPDR_PUPD_Msk(VCC_PIN), 0b00 << GPIO_PUPDR_PUPD_Pos(VCC_PIN));
-	MODIFY_REG(VCC_GPIO->OSPEEDR, GPIO_OSPEEDER_OSPEED_Msk(VCC_PIN), 0b00 << GPIO_OSPEEDER_OSPEED_Pos(VCC_PIN));
-	CLEAR_BIT(VCC_GPIO->OTYPER, GPIO_OTYPER_OT(VCC_PIN));
-	MODIFY_REG(VCC_GPIO->MODER, GPIO_MODER_MODE_Msk(VCC_PIN), 0b01 << GPIO_MODER_MODE_Pos(VCC_PIN));
-
-	// Use the 2^15 Hz clock from the LSE as clock source.
-	// To get an exact 10 ms clock, I use a nice idea from https://www.mikrocontroller.net/topic/23135#172414
-	// Solve for x and y:
-	//   x * floor(2^15 / 100) + y * ceil(2^15 / 100) = 2^15
-	//   x + y = 100
-	// See https://www.wolframalpha.com/input/?i=solve+x+*+floor(2%5E15+%2F+100)+%2B+y+*+ceil(2%5E15+%2F+100)+%3D+2%5E15;+x+%2B+y+%3D+100+for+x,+y
-	//   x = 32 (count 32 times to 327) and y = 68 (count 68 times to 328)
-	SET_BIT(TIM2->SMCR, TIM_SMCR_ECE);
-	MODIFY_REG(TIM2->OR, TIM2_OR_ETR_RMP_Msk, 0b101 << TIM2_OR_ETR_RMP_Pos);  // Connect to LSE
-	SET_BIT(TIM2->DIER, TIM_DIER_UIE);
-	NVIC_EnableIRQ(TIM2_IRQn);
-	NVIC_SetPriority(TIM2_IRQn, 20);
-
-	dcf77_disable();
+    disable();
 }
 
-void dcf77_enable(void) {
-	SET_BIT(VCC_GPIO->ODR, GPIO_ODR_OD(VCC_PIN));
+void hw::dcf77::irq_timer() {
+    size_t at = m_write_at;
+    size_t write_index = m_write_index;
+
+    m_samples[write_index][at++] = READ_BIT(m_sig_gpio->IDR, GPIO_IDR_ID(m_sig_pin));
+
+    if (at >= m_samples[write_index].size()) {
+        m_read_index = write_index;
+        write_index += 1;
+        if (write_index >= m_samples.size()) {
+            write_index = 0;
+        }
+        m_write_index = write_index;
+        at = 0;
+    }
+
+    if (at < 32) {
+        WRITE_REG(m_timer->ARR, 326);
+    } else {
+        WRITE_REG(m_timer->ARR, 327);
+    }
+
+    m_write_at = at;
+}
+
+void hw::dcf77::enable() {
+	SET_BIT(m_vcc_gpio->ODR, GPIO_ODR_OD(m_vcc_pin));
 
 	// Signal Pin: pullup, input mode
-	MODIFY_REG(SIGNAL_GPIO->PUPDR, GPIO_PUPDR_PUPD_Msk(SIGNAL_PIN), 0b01 << GPIO_PUPDR_PUPD_Pos(SIGNAL_PIN));
-	MODIFY_REG(SIGNAL_GPIO->MODER, GPIO_MODER_MODE_Msk(SIGNAL_PIN), 0b00 << GPIO_MODER_MODE_Pos(SIGNAL_PIN));
+	MODIFY_REG(m_sig_gpio->PUPDR, GPIO_PUPDR_PUPD_Msk(m_sig_pin), 0b01 << GPIO_PUPDR_PUPD_Pos(m_sig_pin));
+	MODIFY_REG(m_sig_gpio->MODER, GPIO_MODER_MODE_Msk(m_sig_pin), 0b00 << GPIO_MODER_MODE_Pos(m_sig_pin));
 
-	write_at = 0;
-	samples_read = NULL;
-	samples_write = samples_a;
-	WRITE_REG(TIM2->CNT, 0);
-	WRITE_REG(TIM2->ARR, 326);
-	SET_BIT(TIM2->CR1, TIM_CR1_CEN);
+	m_write_at = 0;
+	m_read_index = size_t(-1);
+	m_write_index = 0;
+	WRITE_REG(m_timer->CNT, 0);
+	WRITE_REG(m_timer->ARR, 326);
+	SET_BIT(m_timer->CR1, TIM_CR1_CEN);
 }
 
-void dcf77_disable(void) {
-	CLEAR_BIT(TIM2->CR1, TIM_CR1_CEN);
+void hw::dcf77::disable() {
+	CLEAR_BIT(m_timer->CR1, TIM_CR1_CEN);
 
 	// Signal pin: no pullup/pulldown, analog mode
-	MODIFY_REG(SIGNAL_GPIO->PUPDR, GPIO_PUPDR_PUPD_Msk(SIGNAL_PIN), 0b00 << GPIO_PUPDR_PUPD_Pos(SIGNAL_PIN));
-	MODIFY_REG(SIGNAL_GPIO->MODER, GPIO_MODER_MODE_Msk(SIGNAL_PIN), 0b11 << GPIO_MODER_MODE_Pos(SIGNAL_PIN));
+	MODIFY_REG(m_sig_gpio->PUPDR, GPIO_PUPDR_PUPD_Msk(m_sig_pin), 0b00 << GPIO_PUPDR_PUPD_Pos(m_sig_pin));
+	MODIFY_REG(m_sig_gpio->MODER, GPIO_MODER_MODE_Msk(m_sig_pin), 0b11 << GPIO_MODER_MODE_Pos(m_sig_pin));
 
-	CLEAR_BIT(VCC_GPIO->ODR, GPIO_ODR_OD(VCC_PIN));
+	CLEAR_BIT(m_vcc_gpio->ODR, GPIO_ODR_OD(m_vcc_pin));
 }
 
-bool dcf77_samples_pending() {
-	return samples_read != NULL;
+bool hw::dcf77::samples_pending() const {
+	return m_read_index != size_t(-1);
 }
 
-void dcf77_clear_samples_pending(bool output_samples[dcf77::samples_per_second]) {
-	volatile const bool* current_samples = samples_read;
-	samples_read = NULL;
-	if (output_samples != NULL) {
-		for (int i = 0; i < dcf77::samples_per_second; ++i) {
-			output_samples[i] = current_samples[i];
-		}
+std::array<bool, ::dcf77::samples_per_second> hw::dcf77::clear_pending_samples() {
+    std::array<bool, ::dcf77::samples_per_second> result;
+    size_t read_index = m_read_index;
+	if (read_index != size_t(-1)) {
+	    m_read_index = size_t(-1);
+	    std::copy(m_samples[read_index].begin(), m_samples[read_index].end(), result.begin());
 	}
-}
-
-extern "C" void TIM2_IRQHandler(void) {
-	if (READ_BIT(TIM2->SR, TIM_SR_UIF)) {
-		CLEAR_BIT(TIM2->SR, TIM_SR_UIF);
-
-		int at = write_at;
-		volatile bool* samples = samples_write;
-
-		samples[at++] = READ_BIT(SIGNAL_GPIO->IDR, GPIO_IDR_ID(SIGNAL_PIN));
-
-		if (at >= dcf77::samples_per_second) {
-			samples_read = samples;
-			samples_write = (samples == samples_a) ? samples_b : samples_a;
-			at = 0;
-		}
-
-		if (at < 32) {
-			WRITE_REG(TIM2->ARR, 326);
-		} else {
-			WRITE_REG(TIM2->ARR, 327);
-		}
-
-		write_at = at;
-	}
+	return result;
 }

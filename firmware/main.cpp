@@ -63,15 +63,17 @@ struct power_and_clocks {
 static power_and_clocks power_and_clocks;
 static hw::rtc rtc(RTC);
 static hw::display display(LCD, {{GPIOA, {1, 2, 3, 6, 7, 8, 9, 10}}, {GPIOB, {0, 1, 3, 4, 5, 9, 10, 11}}});
+static hw::dcf77 dcf(GPIOB, 6, GPIOB, 7, TIM2);
 
 int main() {
-    dcf77_init();
-
     NVIC_EnableIRQ(RTC_IRQn);
     NVIC_SetPriority(RTC_IRQn, 200);
     SET_BIT(EXTI->IMR, EXTI_IMR_IM17);
     SET_BIT(EXTI->EMR, EXTI_EMR_EM17);
     SET_BIT(EXTI->RTSR, EXTI_RTSR_RT17);
+
+    NVIC_EnableIRQ(TIM2_IRQn);
+    NVIC_SetPriority(TIM2_IRQn, 20);
 
     bool need_sync = true;
     bool syncing = false;
@@ -84,19 +86,22 @@ int main() {
     	if (need_sync && !syncing) {
 			syncing = true;
 			parser = dcf77::parser();
-			dcf77_enable();
+			dcf.enable();
 			display.set_dot(1, true);
     	}
 
-    	if (syncing && dcf77_samples_pending()) {
-    		bool samples[dcf77::samples_per_second];
-    		dcf77_clear_samples_pending(samples);
-			if (parser.feed(samples)) {
+    	if (syncing && dcf.samples_pending()) {
+    		auto samples = dcf.clear_pending_samples();
+    		for (int b : samples) {
+    		    DEBUG_PRINTF("%d", b);
+    		}
+    		DEBUG_PRINTF("\n");
+			if (parser.feed(&samples[0])) {
 			    if (auto frame = parser.get_result()) {
                     rtc.set_time(*frame);
                     need_sync = false;
                     syncing = false;
-                    dcf77_disable();
+                    dcf.disable();
                     display.set_dot(1, false);
 			    }
 			}
@@ -125,7 +130,7 @@ int main() {
         // Done... for now.
     	__disable_irq();
         bool something_pending =
-                (syncing && dcf77_samples_pending()) ||
+                (syncing && dcf.samples_pending()) ||
                 rtc.second_pending();
         if (!something_pending) {
             __WFI();
@@ -149,5 +154,12 @@ extern "C" void RTC_IRQHandler() {
             WRITE_REG(EXTI->PR, EXTI_PR_PIF17);
             rtc.irq_alarm_a();
         }
+    }
+}
+
+extern "C" void TIM2_IRQHandler() {
+    if (READ_BIT(TIM2->SR, TIM_SR_UIF)) {
+        WRITE_REG(TIM2->SR, ~TIM_SR_UIF);
+        dcf.irq_timer();
     }
 }
