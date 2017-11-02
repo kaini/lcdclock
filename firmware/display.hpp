@@ -26,6 +26,7 @@ class display {
 public:
     using pins = std::initializer_list<std::tuple<GPIO_TypeDef*, std::initializer_list<size_t>>>;
 
+    // LCD is the LCD controller and pins are LCD I/O pins. The LSE is expected to be clocked at 2^15 Hz.
     display(LCD_TypeDef* lcd, pins pins);
 
     display(const display&) = delete;

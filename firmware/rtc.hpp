@@ -4,9 +4,9 @@
 
 namespace hw {
 
-// Abstracts the RTC.
 class rtc {
 public:
+    // RTC is the RTC controller.
     rtc(RTC_TypeDef* rtc);
 
     // Call this function in the RTC ALARM A interrupt (RTC IRQ, External Interrupt 17)
