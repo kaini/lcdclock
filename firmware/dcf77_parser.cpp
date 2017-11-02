@@ -7,7 +7,7 @@ static dcf77::bit parse_bit(const bool* samples, size_t start_index) {
     int low_ms = 0;
     for (size_t i = 0; i < dcf77::samples_per_second / 5; ++i) {
         size_t index = i + start_index;
-        if (index > dcf77::samples_per_second) {
+        if (index >= dcf77::samples_per_second) {
             index -= dcf77::samples_per_second;
         }
         if (!samples[index]) {
