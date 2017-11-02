@@ -37,8 +37,7 @@ int datetime::month_days(int month, int year) {
     case 2:
         return is_leap_year(year) ? 29 : 28;
     default:
-        ASSERT(false);
-        return 0;
+        ASSERT_UNREACHABLE();
     }
 }
 
@@ -127,5 +126,35 @@ bool datetime::operator<(const datetime& a, const datetime& b) {
     return
         std::make_tuple(a.year(), a.month(), a.day(), a.hour(), a.minute(), a.second()) <
         std::make_tuple(b.year(), b.month(), b.day(), b.hour(), b.minute(), b.second());
+}
+
+int datetime::weekday(const datetime& dt) {
+    // This implements "Sakamoto's Method"
+    // https://en.wikipedia.org/wiki/Determination_of_the_day_of_the_week#Sakamoto.27s_methods
+    static constexpr int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+    int y = dt.year();
+    int m = dt.month();
+    int d = dt.day();
+    y -= m < 3;
+    return (y + y/4 - y/100 + y/400 + t[m-1] + d) % 7;
+}
+
+bool datetime::is_eu_dst(const datetime& dt) {
+    if (dt.month() < 3 || dt.month() > 10) {
+        return false;
+    } else if (dt.month() > 3 && dt.month() < 10) {
+        return true;
+    } else {
+        // Find the last Sunday in the month at 1:00 UTC.
+        datetime last_sunday(dt.year(), dt.month(), month_days(dt.month(), dt.year()), 1, 0, 0);
+        last_sunday.add_days(-weekday(last_sunday));
+        if (dt.month() == 3) {
+            return dt >= last_sunday;
+        } else if (dt.month() == 10) {
+            return dt < last_sunday;
+        } else {
+            ASSERT_UNREACHABLE();
+        }
+    }
 }
 

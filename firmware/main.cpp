@@ -111,6 +111,12 @@ int main() {
     		rtc.clear_second_pending();
 
     		auto localtime = now;
+    		if (datetime::is_eu_dst(localtime)) {
+    		    localtime.add_hours(2);
+    		} else {
+    		    localtime.add_hours(1);
+    		}
+
 			if (localtime.hour() < 10) {
 				display.set_digit(0, hw::display_digit::none);
 			} else {

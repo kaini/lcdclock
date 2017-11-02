@@ -46,5 +46,11 @@ inline bool operator<=(const datetime& a, const datetime& b) { return a < b || a
 inline bool operator>=(const datetime& a, const datetime& b) { return !(a < b); }
 inline bool operator>(const datetime& a, const datetime& b) { return !(a <= b); }
 
+// Returns the weekday 0 = Sunday, 1 = Monday ...
+int weekday(const datetime& dt);
+
+// Checks if the given UTC datetime is in the EU's definition of DST.
+bool is_eu_dst(const datetime& dt);
+
 }
 

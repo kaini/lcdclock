@@ -39,4 +39,33 @@ BOOST_AUTO_TEST_CASE(is_leap_year_test) {
     BOOST_CHECK_EQUAL(datetime::is_leap_year(2100), false);
 }
 
+BOOST_AUTO_TEST_CASE(weekday_test) {
+    BOOST_CHECK_EQUAL(datetime::weekday({2017, 11, 12, 0, 0, 0}), 0);
+    BOOST_CHECK_EQUAL(datetime::weekday({2000, 2, 29, 23, 59, 59}), 2);
+    BOOST_CHECK_EQUAL(datetime::weekday({2054, 6, 19, 12, 0, 0}), 5);
+}
+
+BOOST_AUTO_TEST_CASE(is_eu_dst_test) {
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2017, 1, 28, 5, 1, 2}), false);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2017, 2, 28, 5, 1, 2}), false);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2017, 3, 28, 5, 1, 2}), true);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2017, 4, 28, 5, 1, 2}), true);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2017, 5, 28, 5, 1, 2}), true);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2017, 6, 28, 5, 1, 2}), true);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2017, 7, 28, 5, 1, 2}), true);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2017, 8, 28, 5, 1, 2}), true);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2017, 9, 28, 5, 1, 2}), true);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2017, 10, 28, 5, 1, 2}), true);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2017, 11, 28, 5, 1, 2}), false);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2017, 12, 28, 5, 1, 2}), false);
+
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2033, 3, 27, 0, 59, 59}), false);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2033, 3, 27, 1, 0, 0}), true);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2033, 3, 27, 1, 0, 1}), true);
+
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2085, 10, 28, 0, 59, 59}), true);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2085, 10, 28, 1, 0, 0}), false);
+    BOOST_CHECK_EQUAL(datetime::is_eu_dst({2085, 10, 28, 1, 0, 1}), false);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

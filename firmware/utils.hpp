@@ -1,14 +1,17 @@
 #pragma once
 #include <cassert>
+#include <cstdlib>
 
 #ifdef NDEBUG
-    #define ASSERT(EXPR) do { (void)(EXPR); } while (0)
+    #define ASSERT(EXPR) do { if (!(EXPR)) { abort(); while (1) {} } } while (0)
 #else
     #define ASSERT(EXPR) do { assert(EXPR); } while (0)
 #endif
 
+#define ASSERT_UNREACHABLE() do { ASSERT(false); abort(); while (1) {} } while (0)
+
 #ifdef NDEBUG
-	#define DEBUG_PRINTF() do { } while (0)
+	#define DEBUG_PRINTF(...) do { } while (0)
 #else
     #ifdef TEST
         #include <cstdio>
