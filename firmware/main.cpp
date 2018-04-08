@@ -87,6 +87,14 @@ int main() {
     while (true) {
         auto now = rtc.get_time();
 
+        // Resynchronize each Sunday at 4:04 UTC.
+        if (!need_sync && now.hour() == 4 && now.minute() == 4 && weekday(now) == 0) {
+            // In theory this could trigger multiple syncs back-to-back if a single
+            // sync finishes quicker than in one minute, but this impossible as long
+            // as the clock did not drift too much.
+            need_sync = true;
+        }
+
     	if (need_sync && !syncing) {
 			syncing = true;
 			parser = dcf77::parser();
@@ -133,20 +141,15 @@ int main() {
     	display.refresh();
     	first_iteration = false;
 
-    	if (syncing) {
+        // Done... for now
+    	// Never sleep while syncing, because the voltage is more stable
+    	// if the CPU does not enter a sleep mode. This helps the DCF77
+    	// module to receive a signal faster.
+    	__disable_irq();
+        bool something_pending = syncing || rtc.second_pending();
+        if (!something_pending) {
             // Setup stop mode
             SET_BIT(SCB->SCR, SCB_SCR_SLEEPDEEP_Msk);
-    	} else {
-    	    // No deep sleep mode if syncing
-            CLEAR_BIT(SCB->SCR, SCB_SCR_SLEEPDEEP_Msk);
-    	}
-
-        // Done... for now
-    	__disable_irq();
-        bool something_pending =
-                (syncing && dcf.samples_pending()) ||
-                rtc.second_pending();
-        if (!something_pending) {
             __WFI();
         }
         __enable_irq();
