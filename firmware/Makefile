@@ -49,7 +49,7 @@ else
 endif
 
 TEST_CXX := g++
-TEST_CXXFLAGS := $(COMMON_C_CXX_FLAGS) -std=gnu++14 -O0
+TEST_CXXFLAGS := $(COMMON_C_CXX_FLAGS) -DTEST -std=gnu++14 -O0
 TEST_LIBS := -lboost_unit_test_framework-mt
 
 .SUFFIXES:  # disable builtin rules

@@ -174,6 +174,7 @@ dcf77::parser::parser() {
 bool dcf77::parser::feed(const bool* samples) {
     m_bit_sync.feed(samples);
     if (m_bit_sync.bit_start() == size_t(-1)) {
+        DEBUG_PRINTF("No bit sync yet\n");
         return false;
     }
 
@@ -283,20 +284,24 @@ std::experimental::optional<datetime::datetime> dcf77::parser::get_result() cons
             (m_result.in_dst == bit::zero && m_result.not_in_dst == bit::one)
         );
 	if (!layout_valid) {
+	    DEBUG_PRINTF("Invalid DCF frame layout\n");
 		return {};
 	}
 
     if (!is_parity_valid(m_result.minute_bits, m_result.minute_parity)) {
+        DEBUG_PRINTF("Invalid DCF minute parity\n");
     	return {};
     }
     int minute = parse_valid_number(m_result.minute_ones) + parse_valid_number(m_result.minute_tens) * 10;
 
     if (!is_parity_valid(m_result.hour_bits, m_result.hour_parity)) {
+        DEBUG_PRINTF("Invalid DCF hour parity\n");
     	return {};
     }
     int hour = parse_valid_number(m_result.hour_ones) + parse_valid_number(m_result.hour_tens) * 10;
 
     if (!is_parity_valid(m_result.date_bits, m_result.date_parity)) {
+        DEBUG_PRINTF("Invalid DCF date parity\n");
         return {};
     }
     int day = parse_valid_number(m_result.day_ones) + parse_valid_number(m_result.day_tens) * 10;
@@ -314,6 +319,7 @@ std::experimental::optional<datetime::datetime> dcf77::parser::get_result() cons
         }
         return result;
     } catch (const datetime::invalid_datetime_exception&) {
+        DEBUG_PRINTF("Invalid DCF datetime received\n");
         return {};
     }
 }

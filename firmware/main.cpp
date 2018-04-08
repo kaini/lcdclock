@@ -66,6 +66,10 @@ static hw::display display(LCD, {{GPIOA, {1, 2, 3, 6, 7, 8, 9, 10}}, {GPIOB, {0,
 static hw::dcf77 dcf(GPIOB, 6, GPIOB, 7, TIM2);
 
 int main() {
+    // Read and clear reset bit
+    //const bool cold_boot = !READ_BIT(PWR->CSR, PWR_CSR_WUF);
+    SET_BIT(PWR->CR, PWR_CR_CWUF);
+
     NVIC_EnableIRQ(RTC_IRQn);
     NVIC_SetPriority(RTC_IRQn, 200);
     SET_BIT(EXTI->IMR, EXTI_IMR_IM17);
@@ -92,10 +96,6 @@ int main() {
 
     	if (syncing && dcf.samples_pending()) {
     		auto samples = dcf.clear_pending_samples();
-    		for (int b : samples) {
-    		    DEBUG_PRINTF("%d", b);
-    		}
-    		DEBUG_PRINTF("\n");
 			if (parser.feed(&samples[0])) {
 			    if (auto frame = parser.get_result()) {
                     rtc.set_time(*frame);
@@ -133,7 +133,15 @@ int main() {
     	display.refresh();
     	first_iteration = false;
 
-        // Done... for now.
+    	if (syncing) {
+            // Setup stop mode
+            SET_BIT(SCB->SCR, SCB_SCR_SLEEPDEEP_Msk);
+    	} else {
+    	    // No deep sleep mode if syncing
+            CLEAR_BIT(SCB->SCR, SCB_SCR_SLEEPDEEP_Msk);
+    	}
+
+        // Done... for now
     	__disable_irq();
         bool something_pending =
                 (syncing && dcf.samples_pending()) ||

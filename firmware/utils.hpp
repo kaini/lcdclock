@@ -10,16 +10,11 @@
 
 #define ASSERT_UNREACHABLE() do { ASSERT(false); abort(); while (1) {} } while (0)
 
-#ifdef NDEBUG
+#if defined(NDEBUG) || defined(TEST)
 	#define DEBUG_PRINTF(...) do { } while (0)
 #else
-    #ifdef TEST
-        #include <cstdio>
-        #define DEBUG_PRINTF(...) do { printf(__VA_ARGS__); } while (0)
-    #else
-        #include "SEGGER_RTT.h"
-        #define DEBUG_PRINTF(...) do { SEGGER_RTT_printf(0, __VA_ARGS__); } while (0)
-    #endif
+    #include "SEGGER_RTT.h"
+    #define DEBUG_PRINTF(...) do { SEGGER_RTT_printf(0, __VA_ARGS__); } while (0)
 #endif
 
 #define GPIO_PUPDR_PUPD_Pos(PIN) (2 * (PIN))
