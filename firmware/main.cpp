@@ -84,6 +84,8 @@ int main() {
     bool first_iteration = true;
     dcf77::parser parser;
 
+    display.enable(true);
+
     while (true) {
         auto now = rtc.get_time();
 
@@ -99,7 +101,7 @@ int main() {
 			syncing = true;
 			parser = dcf77::parser();
 			dcf.enable();
-			display.set_dot(1, true);
+			//display.enable(false);
     	}
 
     	if (syncing && dcf.samples_pending()) {
@@ -110,7 +112,7 @@ int main() {
                     need_sync = false;
                     syncing = false;
                     dcf.disable();
-                    display.set_dot(1, false);
+                    //display.enable(true);
 			    }
 			}
     	}
@@ -142,14 +144,16 @@ int main() {
     	first_iteration = false;
 
         // Done... for now
-    	// Never sleep while syncing, because the voltage is more stable
-    	// if the CPU does not enter a sleep mode. This helps the DCF77
-    	// module to receive a signal faster.
-    	__disable_irq();
-        bool something_pending = syncing || rtc.second_pending();
-        if (!something_pending) {
-            // Setup stop mode
+    	if (syncing) {
+            // Simple sleep mode
+            CLEAR_BIT(SCB->SCR, SCB_SCR_SLEEPDEEP_Msk);
+        } else {
+            // Stop mode
             SET_BIT(SCB->SCR, SCB_SCR_SLEEPDEEP_Msk);
+        }
+    	__disable_irq();
+        bool something_pending = (syncing && dcf.samples_pending()) || rtc.second_pending();
+        if (!something_pending) {
             __WFI();
         }
         __enable_irq();

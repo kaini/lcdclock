@@ -142,21 +142,15 @@ void dcf77::frame_sync::feed(bit bit) {
 
         // The counters have to be clamped every now and then to avoid that it takes
         // a too long time to resync the minute mark if it changes after a leap
-        // second. In this setup it takes at most 11 minutes to resync to a new
-        // minute mark after a leap second.
-        if (m_histogram[m_at] >= 10) {
-            for (auto& count : m_histogram) {
-                if (count >= 5) {
-                    count -= 5;
-                }
-            }
+        // second or other errors.
+        if (m_histogram[m_at] > 3) {
+            std::fill(m_histogram.begin(), m_histogram.end(), 0);
+            m_histogram[m_at] = 1;
         }
 
         // Set a new minute mark if this is new new maximum.
-        if (m_at != m_frame_start) {
-            if (m_histogram[m_at] > m_histogram[m_frame_start]) {
-                m_frame_start = m_at;
-            }
+        if (m_at != m_frame_start && m_histogram[m_at] > m_histogram[m_frame_start]) {
+            m_frame_start = m_at;
         }
     }
 
@@ -174,7 +168,6 @@ dcf77::parser::parser() {
 bool dcf77::parser::feed(const bool* samples) {
     m_bit_sync.feed(samples);
     if (m_bit_sync.bit_start() == size_t(-1)) {
-        DEBUG_PRINTF("No bit sync yet\n");
         return false;
     }
 

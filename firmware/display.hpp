@@ -38,6 +38,7 @@ public:
     void set_dot(size_t i, bool visible) { m_dots[i] = visible; m_need_refresh = true; }
     void set_colon(bool visible) { m_colon = visible; m_need_refresh = true; }
 
+    void enable(bool enable);
     void refresh(bool force = false);
 
 private:
@@ -48,6 +49,7 @@ private:
     std::array<display_digit, 6> m_digits;
     std::array<bool, 4> m_dots;
     bool m_colon = false;
+    bool m_enabled = false;
 };
 
 }
