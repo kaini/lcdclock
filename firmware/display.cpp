@@ -27,11 +27,11 @@ hw::display::display(LCD_TypeDef* lcd, pins pins) : m_lcd(lcd) {
     // 1/3 bias, 1/4 duty, external voltage
     MODIFY_REG(m_lcd->CR, LCD_CR_BIAS_Msk | LCD_CR_DUTY_Msk, (0b00 << LCD_CR_BIAS_Pos) | (0b011 << LCD_CR_DUTY_Pos) | LCD_CR_VSEL);
 
-    // 32768 rtc / 2^3 prescaler / 16 divider = 256 Hz; 256 Hz / 4 duty -> 64 Hz
+    // 32768 rtc / 2^4 prescaler / 16 divider = 128 Hz; 128 Hz / 4 duty -> 32 Hz
     MODIFY_REG(
             m_lcd->FCR,
             LCD_FCR_PS_Msk | LCD_FCR_DIV_Msk | LCD_FCR_PON_Msk | LCD_FCR_DEAD_Msk,
-            (3 << LCD_FCR_PS_Pos) | (0 << LCD_FCR_DIV_Pos) | (1 << LCD_FCR_PON_Pos) | (0 << LCD_FCR_DEAD_Pos) | LCD_FCR_HD);
+            (4 << LCD_FCR_PS_Pos) | (0 << LCD_FCR_DIV_Pos) | (1 << LCD_FCR_PON_Pos) | (0 << LCD_FCR_DEAD_Pos) | LCD_FCR_HD);
 
     enable(false);
     refresh(true);
