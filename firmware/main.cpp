@@ -101,7 +101,7 @@ int main() {
 			syncing = true;
 			parser = dcf77::parser();
 			dcf.enable();
-			//display.enable(false);
+			display.set_dot(1, true);
     	}
 
     	if (syncing && dcf.samples_pending()) {
@@ -112,7 +112,7 @@ int main() {
                     need_sync = false;
                     syncing = false;
                     dcf.disable();
-                    //display.enable(true);
+                    display.set_dot(1, false);
 			    }
 			}
     	}

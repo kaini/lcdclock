@@ -39,7 +39,7 @@ $Descr A4 11693 8268
 encoding utf-8
 Sheet 1 1
 Title "LCD Clock"
-Date "2017-09-18"
+Date ""
 Rev ""
 Comp ""
 Comment1 ""
@@ -277,9 +277,6 @@ Wire Wire Line
 	6600 1050 6500 1050
 Wire Wire Line
 	6200 1050 6100 1050
-Wire Wire Line
-	6100 950  6100 1550
-Connection ~ 6100 1050
 $Comp
 L SW_Push SW1
 U 1 1 59C114FC
@@ -574,17 +571,6 @@ F 3 "" H 5950 1350 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L VCC #PWR012
-U 1 1 59C307CF
-P 6100 950
-F 0 "#PWR012" H 6100 800 50  0001 C CNN
-F 1 "VCC" H 6100 1100 50  0000 C CNN
-F 2 "" H 6100 950 50  0001 C CNN
-F 3 "" H 6100 950 50  0001 C CNN
-	1    6100 950 
-	1    0    0    -1  
-$EndComp
-$Comp
 L VCC #PWR013
 U 1 1 59C30C48
 P 5100 5750
@@ -833,4 +819,6 @@ Wire Wire Line
 	8600 3700 9200 3700
 Text Notes 8600 3900 0    60   ~ 0
 Backlight\nDo not connect if not needed.
+Wire Wire Line
+	6100 1050 6100 1550
 $EndSCHEMATC
